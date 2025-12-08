@@ -6,6 +6,7 @@
     <title>منتجات مدينتي - للمنتجات الفلسطينية 🇵🇸</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
 
     <style>
@@ -180,8 +181,36 @@
 
                 confirmAndSend() {
                     this.isLoading = true;
-                    const orderData = { customer: this.customer, items: this.cartItems, total: this.totalPrice };
-                    google.script.run.withSuccessHandler(() => { this.openWhatsApp(); }).withFailureHandler((error) => { alert("حدث خطأ في الاتصال"); this.openWhatsApp(); }).saveOrder(orderData);
+                    
+                    const orderData = {
+                        customer: this.customer,
+                        items: this.cartItems,
+                        total: this.totalPrice,
+                        orderId: this.orderId
+                    };
+
+                    // ===========================================
+                    // هنا تم وضع الرابط الخاص بك 👇
+                    // ===========================================
+                    const scriptURL = "https://script.google.com/macros/s/AKfycbwhiiH9aTstbgI9xzsbKvoqKXxAo1UIovig2DRXSGYyupyuGhvlwTcsuGOSSNZQzo_5/exec"; 
+
+                    fetch(scriptURL, {
+                        method: 'POST',
+                        mode: 'no-cors', // هام جداً لتجاوز مشاكل الأمان
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(orderData)
+                    })
+                    .then(() => {
+                        // نجح الإرسال
+                        this.openWhatsApp();
+                    })
+                    .catch((error) => {
+                        console.error('Error:', error);
+                        // في حال حدوث خطأ، نكمل للواتساب لكي لا نخسر الزبون
+                        this.openWhatsApp();
+                    });
                 },
 
                 openWhatsApp() {
@@ -192,9 +221,11 @@
                     message += `-----------------------------\n💰 *الإجمالي النهائي:* ${this.totalPrice} جنيه\n`;
                     message += this.totalPrice > 1500 ? `🚚 شحن مجاني ✅` : `🚚 + مصاريف الشحن`;
                     
-                    // *** استبدل رقمك هنا ***
+                    // *** ضع رقم هاتفك هنا ***
                     const phoneNumber = "201xxxxxxxxx"; 
+                    
                     window.location.href = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+                    
                     setTimeout(() => { this.isLoading = false; }, 3000);
                 }
             }
@@ -295,7 +326,9 @@
                         </div>
                         <div class="flex items-center gap-2">
                              <span class="text-xs text-gray-400" x-show="!showCartDetails">اضغط للتفاصيل</span>
-                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500 transition-transform duration-300" :class="showCartDetails ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500 transition-transform duration-300" :class="showCartDetails ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                            </svg>
                         </div>
                     </div>
 
