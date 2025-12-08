@@ -4,11 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>منتجات مدينتي - للمنتجات الفلسطينية 🇵🇸</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; padding-bottom: 120px; }
         .scroll-hidden::-webkit-scrollbar { display: none; }
@@ -24,7 +22,6 @@
         .spinner { border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 3px solid #fff; width: 20px; height: 20px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
-
     <script>
         function shop() {
             return {
@@ -38,9 +35,7 @@
                 orderId: Math.floor(Math.random() * 9000) + 1000,
                 locationStatus: '📍 تحديد موقعي الحالي',
                 customer: { name: '', phone: '', address: '', mapLink: '' },
-                
                 categories: ['المنتجات التراثية', 'بهارات وتوابل', 'مأكولات ومونة', 'حلويات ومكسرات', 'طلبات خاصة', 'أدوات منزلية'],
-                
                 products: [
                     {id: 1, category: 'المنتجات التراثية', name: 'الكوفية الفلسطينية', price: 550, oldPrice: 600, desc: 'أصلية - رمز التراث', available: true},
                     {id: 10, category: 'بهارات وتوابل', name: 'بهار أبيض', price: 100, desc: '100 جرام - للصوصات والبشاميل', available: true},
@@ -112,60 +107,24 @@
                     {id: 120, category: 'أدوات منزلية', name: 'زبدية فخار غزاوية', price: 50, desc: 'قطر 14سم', available: true},
                     {id: 121, category: 'أدوات منزلية', name: 'المدقة الخشب', price: 100, desc: 'غزاوية', available: true}
                 ],
-
-                getProductsByCategory(cat) {
-                    return this.products.filter(p => p.category === cat || (cat === 'طلبات خاصة' && p.category.includes('طلبات')));
-                },
-
-                get cartItems() {
-                    return Object.keys(this.cart).map(id => {
-                        const product = this.products.find(p => p.id == id);
-                        return { ...product, qty: this.cart[id] };
-                    });
-                },
-
-                addToCart(product) {
-                    if (!this.cart[product.id]) this.cart[product.id] = 0;
-                    this.cart[product.id]++;
-                },
-
-                removeFromCart(product) {
-                    if (this.cart[product.id] > 0) {
-                        this.cart[product.id]--;
-                        if (this.cart[product.id] === 0) delete this.cart[product.id];
-                    }
-                },
-
-                get totalCount() {
-                    return Object.values(this.cart).reduce((a, b) => a + b, 0);
-                },
-
-                get totalPrice() {
-                    return Object.keys(this.cart).reduce((total, id) => {
-                        const product = this.products.find(p => p.id == id);
-                        return total + (product.price * this.cart[id]);
-                    }, 0);
-                },
-
-                validatePhone() {
-                    const phone = this.customer.phone;
-                    const regex = /^01\d{9}$/;
-                    this.phoneError = !regex.test(phone);
-                },
-
-                get isFormValid() {
-                    return this.customer.name.trim() !== '' && 
-                           this.customer.phone.trim() !== '' && 
-                           this.customer.address.trim() !== '';
-                },
-
+                getProductsByCategory(cat) { return this.products.filter(p => p.category === cat || (cat === 'طلبات خاصة' && p.category.includes('طلبات'))); },
+                get cartItems() { return Object.keys(this.cart).map(id => { const product = this.products.find(p => p.id == id); return { ...product, qty: this.cart[id] }; }); },
+                addToCart(product) { if (!this.cart[product.id]) this.cart[product.id] = 0; this.cart[product.id]++; },
+                removeFromCart(product) { if (this.cart[product.id] > 0) { this.cart[product.id]--; if (this.cart[product.id] === 0) delete this.cart[product.id]; } },
+                get totalCount() { return Object.values(this.cart).reduce((a, b) => a + b, 0); },
+                get totalPrice() { return Object.keys(this.cart).reduce((total, id) => { const product = this.products.find(p => p.id == id); return total + (product.price * this.cart[id]); }, 0); },
+                validatePhone() { const phone = this.customer.phone; const regex = /^01\d{9}$/; this.phoneError = !regex.test(phone); },
+                get isFormValid() { return this.customer.name.trim() !== '' && this.customer.phone.trim() !== '' && this.customer.address.trim() !== ''; },
+                
+                // --- إصلاح دالة الموقع (Fix Location) ---
                 getLocation() {
                     this.locationStatus = 'جاري التحديد...';
                     if (navigator.geolocation) {
                         navigator.geolocation.getCurrentPosition((position) => {
                             const lat = position.coords.latitude;
                             const long = position.coords.longitude;
-                            this.customer.mapLink = `http://googleusercontent.com/maps.google.com/?q=${lat},${long}`;
+                            // استخدام الرابط العالمي المضمون
+                            this.customer.mapLink = `https://www.google.com/maps/search/?api=1&query=${lat},${long}`;
                             this.locationStatus = 'تم التحديد ✅';
                         }, () => {
                             this.locationStatus = 'تعذر التحديد';
@@ -174,43 +133,27 @@
                     }
                 },
 
-                generateReceipt() {
-                    this.showForm = false;
-                    this.showReceipt = true;
-                },
-
+                generateReceipt() { this.showForm = false; this.showReceipt = true; },
+                
                 confirmAndSend() {
                     this.isLoading = true;
-                    
                     const orderData = {
                         customer: this.customer,
                         items: this.cartItems,
                         total: this.totalPrice,
                         orderId: this.orderId
                     };
-
-                    // ===========================================
-                    // هنا تم وضع الرابط الخاص بك 👇
-                    // ===========================================
-                    const scriptURL = "https://script.google.com/macros/s/AKfycbwhiiH9aTstbgI9xzsbKvoqKXxAo1UIovig2DRXSGYyupyuGhvlwTcsuGOSSNZQzo_5/exec"; 
+                    // *** رابط السكربت الخاص بك ***
+                    const scriptURL = "https://script.google.com/macros/s/AKfycbwhiiH9aTstbgI9xzsbKvoqKXxAo1UIovig2DRXSGYyupyuGhvlwTcsuGOSSNZQzo_5/exec";
 
                     fetch(scriptURL, {
                         method: 'POST',
-                        mode: 'no-cors', // هام جداً لتجاوز مشاكل الأمان
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(orderData)
                     })
-                    .then(() => {
-                        // نجح الإرسال
-                        this.openWhatsApp();
-                    })
-                    .catch((error) => {
-                        console.error('Error:', error);
-                        // في حال حدوث خطأ، نكمل للواتساب لكي لا نخسر الزبون
-                        this.openWhatsApp();
-                    });
+                    .then(() => { this.openWhatsApp(); })
+                    .catch((error) => { console.error('Error:', error); this.openWhatsApp(); });
                 },
 
                 openWhatsApp() {
@@ -221,8 +164,8 @@
                     message += `-----------------------------\n💰 *الإجمالي النهائي:* ${this.totalPrice} جنيه\n`;
                     message += this.totalPrice > 1500 ? `🚚 شحن مجاني ✅` : `🚚 + مصاريف الشحن`;
                     
-                    // *** ضع رقم هاتفك هنا ***
-                    const phoneNumber = "201032825648"; 
+                    // *** رقمك أنت (صاحب المتجر) ***
+                    const phoneNumber = "201099616223"; 
                     
                     window.location.href = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
                     
@@ -232,201 +175,135 @@
         }
     </script>
 </head>
-<body>
+<body x-data="shop()">
+    <header class="bg-white shadow-sm p-4 sticky top-0 z-20">
+        <div class="flex justify-between items-center">
+            <div><h1 class="text-2xl font-extrabold text-gray-800">منتجات مدينتي 🇵🇸</h1><p class="text-xs text-gray-500">أصالة الطعم الفلسطيني</p></div>
+            <div class="bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-200">توصيل مجاني +1500ج</div>
+        </div>
+    </header>
 
-    <div x-data="shop()" class="min-h-screen">
+    <div class="container mx-auto px-4 mt-2">
+        <div class="flex overflow-x-auto space-x-2 space-x-reverse mb-6 scroll-hidden py-2 sticky top-[72px] z-10 bg-[#f3f4f6]">
+            <template x-for="cat in categories" :key="cat">
+                <button @click="activeCategory = cat" :class="activeCategory === cat ? 'bg-green-600 text-white border-green-600 shadow-md transform scale-105' : 'bg-white text-gray-600 border-gray-200'" class="flex-shrink-0 border px-5 py-2 rounded-full text-sm font-bold transition-all duration-200 whitespace-nowrap" x-text="cat"></button>
+            </template>
+        </div>
 
-        <header class="bg-white shadow-sm p-4 sticky top-0 z-20">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h1 class="text-2xl font-extrabold text-gray-800">منتجات مدينتي 🇵🇸</h1>
-                    <p class="text-xs text-gray-500">أصالة الطعم الفلسطيني</p>
-                </div>
-                <div class="bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-200">
-                    توصيل مجاني +1500ج
-                </div>
-            </div>
-        </header>
-
-        <div class="container mx-auto px-4 mt-2">
-
-            <div x-cloak class="flex overflow-x-auto space-x-2 space-x-reverse mb-6 scroll-hidden py-2 sticky top-[72px] z-10 bg-[#f3f4f6]">
-                <template x-for="cat in categories" :key="cat">
-                    <button @click="activeCategory = cat" 
-                       :class="activeCategory === cat ? 'bg-green-600 text-white border-green-600 shadow-md transform scale-105' : 'bg-white text-gray-600 border-gray-200'"
-                       class="flex-shrink-0 border px-5 py-2 rounded-full text-sm font-bold transition-all duration-200 whitespace-nowrap"
-                       x-text="cat">
-                    </button>
-                </template>
-            </div>
-
-            <div x-cloak class="min-h-[50vh]">
-                <div x-show="true" class="space-y-4" x-transition.duration.300ms>
-                    <div class="flex items-center justify-between mb-2">
-                        <h2 class="text-lg font-bold text-gray-800 flex items-center">
-                            <span class="w-1.5 h-6 bg-green-600 rounded-full ml-2"></span>
-                            <span x-text="activeCategory"></span>
-                        </h2>
-                    </div>
-
-                    <div class="grid gap-3">
-                        <template x-for="product in getProductsByCategory(activeCategory)" :key="product.id">
-                            <div class="item-card bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex justify-between items-start relative overflow-hidden">
-                                <template x-if="product.oldPrice">
-                                    <div class="absolute top-0 left-0 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-br-lg font-bold">عرض</div>
-                                </template>
-                                <div class="flex-1 ml-2">
-                                    <h3 class="font-bold text-gray-900 text-base" x-text="product.name"></h3>
-                                    <p class="text-xs text-gray-500 mt-0.5 leading-snug" x-text="product.desc"></p>
-                                    <div class="flex items-center mt-2 space-x-2 space-x-reverse">
-                                        <span class="text-green-700 font-extrabold text-lg" x-text="product.price + ' ج'"></span>
-                                        <template x-if="product.oldPrice">
-                                            <span class="text-gray-400 text-xs line-through decoration-red-400" x-text="product.oldPrice + ' ج'"></span>
-                                        </template>
-                                    </div>
-                                </div>
-                                <div class="flex flex-col items-end self-center">
-                                    <template x-if="!product.available">
-                                        <span class="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded">قريباً</span>
-                                    </template>
-                                    <template x-if="product.available">
-                                        <div>
-                                            <div x-show="cart[product.id] > 0" class="flex items-center bg-gray-50 rounded-lg border border-gray-200">
-                                                <button @click="removeFromCart(product)" class="w-8 h-8 flex items-center justify-center text-red-500 font-bold text-lg active:bg-gray-200 rounded-r-lg">-</button>
-                                                <span class="w-6 text-center font-bold text-sm" x-text="cart[product.id]"></span>
-                                                <button @click="addToCart(product)" class="w-8 h-8 flex items-center justify-center text-green-600 font-bold text-lg active:bg-gray-200 rounded-l-lg">+</button>
-                                            </div>
-                                            <button x-show="!cart[product.id]" @click="addToCart(product)" class="bg-white border border-green-600 text-green-600 w-8 h-8 rounded-lg flex items-center justify-center shadow-sm active:bg-green-50">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                                                </svg>
-                                            </button>
+        <div class="min-h-[50vh]">
+            <div x-show="true" class="space-y-4" x-transition.duration.300ms>
+                <div class="flex items-center justify-between mb-2"><h2 class="text-lg font-bold text-gray-800 flex items-center"><span class="w-1.5 h-6 bg-green-600 rounded-full ml-2"></span><span x-text="activeCategory"></span></h2></div>
+                <div class="grid gap-3">
+                    <template x-for="product in getProductsByCategory(activeCategory)" :key="product.id">
+                        <div class="item-card bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex justify-between items-start relative overflow-hidden">
+                            <template x-if="product.oldPrice"><div class="absolute top-0 left-0 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-br-lg font-bold">عرض</div></template>
+                            <div class="flex-1 ml-2">
+                                <h3 class="font-bold text-gray-900 text-base" x-text="product.name"></h3>
+                                <p class="text-xs text-gray-500 mt-0.5 leading-snug" x-text="product.desc"></p>
+                                <div class="flex items-center mt-2 space-x-2 space-x-reverse"><span class="text-green-700 font-extrabold text-lg" x-text="product.price + ' ج'"></span><template x-if="product.oldPrice"><span class="text-gray-400 text-xs line-through decoration-red-400" x-text="product.oldPrice + ' ج'"></span></template></div>
+                            </div>
+                            <div class="flex flex-col items-end self-center">
+                                <template x-if="!product.available"><span class="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded">قريباً</span></template>
+                                <template x-if="product.available">
+                                    <div>
+                                        <div x-show="cart[product.id] > 0" class="flex items-center bg-gray-50 rounded-lg border border-gray-200">
+                                            <button @click="removeFromCart(product)" class="w-8 h-8 flex items-center justify-center text-red-500 font-bold text-lg active:bg-gray-200 rounded-r-lg">-</button><span class="w-6 text-center font-bold text-sm" x-text="cart[product.id]"></span><button @click="addToCart(product)" class="w-8 h-8 flex items-center justify-center text-green-600 font-bold text-lg active:bg-gray-200 rounded-l-lg">+</button>
                                         </div>
-                                    </template>
-                                </div>
+                                        <button x-show="!cart[product.id]" @click="addToCart(product)" class="bg-white border border-green-600 text-green-600 w-8 h-8 rounded-lg flex items-center justify-center shadow-sm active:bg-green-50"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg></button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="showCartDetails" class="fixed inset-0 bg-black bg-opacity-50 z-40" @click="showCartDetails = false" style="display: none;"></div>
+        <div class="fixed bottom-0 left-0 right-0 z-50 transform transition-transform duration-300" :class="showCartDetails ? 'translate-y-0' : (totalCount > 0 ? 'translate-y-[calc(100%-80px)]' : 'translate-y-full')">
+            <div class="bg-white rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.1)] overflow-hidden flex flex-col max-h-[85vh]">
+                <div @click="showCartDetails = !showCartDetails" class="bg-gray-900 text-white p-4 cursor-pointer flex justify-between items-center h-20 relative">
+                    <div class="absolute top-2 left-1/2 transform -translate-x-1/2 w-12 h-1 bg-gray-600 rounded-full"></div>
+                    <div class="flex items-center gap-3"><div class="bg-green-500 w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg" x-text="totalCount"></div><div class="flex flex-col"><span class="text-sm text-gray-300" x-text="showCartDetails ? 'إخفاء التفاصيل' : 'عربة التسوق'"></span><span class="font-bold text-lg" x-text="totalPrice + ' جنيه'"></span></div></div>
+                    <div class="flex items-center gap-2"><span class="text-xs text-gray-400" x-show="!showCartDetails">اضغط للتفاصيل</span><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500 transition-transform duration-300" :class="showCartDetails ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg></div>
+                </div>
+                <div class="p-4 overflow-y-auto flex-1 bg-gray-50">
+                    <h3 class="text-gray-800 font-bold mb-4 border-b pb-2">المنتجات المختارة:</h3>
+                    <div class="space-y-3">
+                        <template x-for="item in cartItems" :key="item.id">
+                            <div class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center shadow-sm">
+                                <div class="flex-1"><h4 class="font-bold text-gray-800 text-sm" x-text="item.name"></h4><p class="text-xs text-gray-500"><span x-text="item.price"></span>ج × <span x-text="item.qty"></span></p></div>
+                                <div class="flex items-center gap-3"><span class="font-bold text-green-700 text-sm" x-text="(item.price * item.qty) + ' ج'"></span><div class="flex items-center bg-gray-100 rounded-lg h-8"><button @click.stop="removeFromCart(item)" class="w-8 text-red-500 font-bold hover:bg-gray-200 rounded-r-lg">-</button><span class="w-6 text-center text-xs font-bold" x-text="item.qty"></span><button @click.stop="addToCart(item)" class="w-8 text-green-600 font-bold hover:bg-gray-200 rounded-l-lg">+</button></div></div>
                             </div>
                         </template>
                     </div>
+                    <div class="mt-6 bg-white p-4 rounded-xl border border-gray-200">
+                         <div class="flex justify-between mb-2"><span class="text-gray-600 text-sm">مجموع المنتجات</span><span class="font-bold" x-text="totalPrice + ' ج'"></span></div>
+                         <div class="flex justify-between items-center"><span class="text-gray-600 text-sm">التوصيل</span><span class="text-xs font-bold px-2 py-1 rounded bg-green-100 text-green-700" x-show="totalPrice > 1500">مجاني ✅</span><span class="text-xs text-gray-500" x-show="totalPrice <= 1500">يحدد عند الاستلام</span></div>
+                    </div>
+                    <button @click="showCartDetails = false; showForm = true" class="w-full mt-4 bg-green-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-green-700 transition flex justify-center items-center gap-2"><span>تأكيد ومتابعة البيانات</span><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button>
                 </div>
             </div>
+        </div>
 
-            <div x-cloak x-show="showCartDetails" class="fixed inset-0 bg-black bg-opacity-50 z-40" @click="showCartDetails = false"></div>
-            <div x-cloak class="fixed bottom-0 left-0 right-0 z-50 transform transition-transform duration-300"
-                 :class="showCartDetails ? 'translate-y-0' : (totalCount > 0 ? 'translate-y-[calc(100%-80px)]' : 'translate-y-full')">
-                
-                <div class="bg-white rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.1)] overflow-hidden flex flex-col max-h-[85vh]">
-                    <div @click="showCartDetails = !showCartDetails" class="bg-gray-900 text-white p-4 cursor-pointer flex justify-between items-center h-20 relative">
-                        <div class="absolute top-2 left-1/2 transform -translate-x-1/2 w-12 h-1 bg-gray-600 rounded-full"></div>
-                        <div class="flex items-center gap-3">
-                            <div class="bg-green-500 w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg" x-text="totalCount"></div>
-                            <div class="flex flex-col">
-                                <span class="text-sm text-gray-300" x-text="showCartDetails ? 'إخفاء التفاصيل' : 'عربة التسوق'"></span>
-                                <span class="font-bold text-lg" x-text="totalPrice + ' جنيه'"></span>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2">
-                             <span class="text-xs text-gray-400" x-show="!showCartDetails">اضغط للتفاصيل</span>
-                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500 transition-transform duration-300" :class="showCartDetails ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
-                            </svg>
+        <div x-show="showForm" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" style="display: none;">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="showForm = false"></div>
+                <div class="inline-block align-bottom bg-white rounded-t-2xl sm:rounded-2xl text-right overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
+                        <h3 class="text-lg leading-6 font-bold text-gray-900 mb-4 border-b pb-2 text-center">بيانات العميل</h3>
+                        <div class="space-y-4 text-right">
+                            <div><label class="block text-gray-700 text-sm font-bold mb-1">الاسم الكريم</label><input type="text" x-model="customer.name" placeholder="مثال: محمد أحمد" class="w-full border p-2 rounded-lg focus:outline-none focus:border-green-500"></div>
+                            <div><label class="block text-gray-700 text-sm font-bold mb-1">رقم الهاتف (واتساب)</label><input type="tel" x-model="customer.phone" @input="validatePhone()" placeholder="01xxxxxxxxx" maxlength="11" class="w-full border p-2 rounded-lg focus:outline-none focus:border-green-500" :class="{'border-red-500 bg-red-50': phoneError, 'border-green-500': !phoneError && customer.phone.length > 0}"><p x-show="phoneError" class="text-red-500 text-xs mt-1">يجب أن يبدأ بـ 01 ويتكون من 11 رقم</p></div>
+                            <div><label class="block text-gray-700 text-sm font-bold mb-1">العنوان بالتفصيل</label><textarea x-model="customer.address" placeholder="الحي، الشارع، رقم العمارة..." class="w-full border p-2 rounded-lg focus:outline-none focus:border-green-500 h-20"></textarea></div>
+                            <div><label class="block text-gray-700 text-sm font-bold mb-2">الموقع الجغرافي</label><button @click="getLocation()" type="button" class="w-full border border-green-500 text-green-600 bg-green-50 p-2 rounded-lg flex items-center justify-center gap-2 hover:bg-green-100 transition"><span x-text="locationStatus"></span><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg></button></div>
                         </div>
                     </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6 flex flex-col-reverse gap-2">
+                        <button type="button" @click="generateReceipt()" :disabled="!isFormValid || phoneError" :class="(!isFormValid || phoneError) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'" class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-3 bg-green-600 text-base font-medium text-white focus:outline-none">مراجعة الفاتورة</button>
+                        <button type="button" @click="showForm = false" class="w-full inline-flex justify-center rounded-xl border border-gray-300 shadow-sm px-4 py-3 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none">إلغاء</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                    <div class="p-4 overflow-y-auto flex-1 bg-gray-50">
-                        <h3 class="text-gray-800 font-bold mb-4 border-b pb-2">المنتجات المختارة:</h3>
-                        <div class="space-y-3">
+        <div x-show="showReceipt" class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-80 backdrop-blur-sm" aria-labelledby="receipt-title" role="dialog" aria-modal="true" style="display: none;">
+            <div class="flex items-center justify-center min-h-screen p-4">
+                <div class="receipt-container w-full max-w-sm mx-auto relative p-6 pt-8 pb-8 text-center text-gray-900 font-mono text-sm leading-relaxed" @click.away="showReceipt = false">
+                    <div class="receipt-edge-top"></div>
+                    <div class="receipt-edge-bottom"></div>
+                    <div class="border-b-2 border-dashed border-gray-800 pb-4 mb-4">
+                        <h2 class="text-xl font-bold mb-1">منتجات مدينتي</h2>
+                        <p class="text-xs">رقم الطلب: <span x-text="orderId"></span></p>
+                        <p class="text-xs" x-text="new Date().toLocaleDateString('ar-EG') + ' ' + new Date().toLocaleTimeString('ar-EG')"></p>
+                    </div>
+                    <div class="text-right border-b-2 border-dashed border-gray-800 pb-4 mb-4">
+                        <p class="mb-1"><strong>العميل:</strong> <span x-text="customer.name"></span></p>
+                        <p class="mb-1"><strong>الهاتف:</strong> <span dir="ltr" x-text="customer.phone"></span></p>
+                        <p class="mb-1 text-xs text-gray-600 truncate"><strong>العنوان:</strong> <span x-text="customer.address"></span></p>
+                    </div>
+                    <table class="w-full mb-4 text-right">
+                        <thead><tr class="border-b border-gray-400"><th class="pb-2">الصنف</th><th class="pb-2 text-center">الكمية</th><th class="pb-2 text-left">السعر</th></tr></thead>
+                        <tbody>
                             <template x-for="item in cartItems" :key="item.id">
-                                <div class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center shadow-sm">
-                                    <div class="flex-1">
-                                        <h4 class="font-bold text-gray-800 text-sm" x-text="item.name"></h4>
-                                        <p class="text-xs text-gray-500"><span x-text="item.price"></span>ج × <span x-text="item.qty"></span></p>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <span class="font-bold text-green-700 text-sm" x-text="(item.price * item.qty) + ' ج'"></span>
-                                        <div class="flex items-center bg-gray-100 rounded-lg h-8">
-                                            <button @click.stop="removeFromCart(item)" class="w-8 text-red-500 font-bold hover:bg-gray-200 rounded-r-lg">-</button>
-                                            <span class="w-6 text-center text-xs font-bold" x-text="item.qty"></span>
-                                            <button @click.stop="addToCart(item)" class="w-8 text-green-600 font-bold hover:bg-gray-200 rounded-l-lg">+</button>
-                                        </div>
-                                    </div>
-                                </div>
+                                <tr><td class="py-1" x-text="item.name"></td><td class="py-1 text-center" x-text="item.qty"></td><td class="py-1 text-left" x-text="(item.price * item.qty) + ' ج'"></td></tr>
                             </template>
-                        </div>
-
-                        <div class="mt-6 bg-white p-4 rounded-xl border border-gray-200">
-                             <div class="flex justify-between mb-2"><span class="text-gray-600 text-sm">مجموع المنتجات</span><span class="font-bold" x-text="totalPrice + ' ج'"></span></div>
-                             <div class="flex justify-between items-center"><span class="text-gray-600 text-sm">التوصيل</span><span class="text-xs font-bold px-2 py-1 rounded bg-green-100 text-green-700" x-show="totalPrice > 1500">مجاني ✅</span><span class="text-xs text-gray-500" x-show="totalPrice <= 1500">يحدد عند الاستلام</span></div>
-                             <div class="mt-2 text-xs text-gray-400" x-show="totalPrice <= 1500">(اشتري بـ <span x-text="1500 - totalPrice"></span>ج اضافية للحصول على شحن مجاني)</div>
-                        </div>
-
-                        <button @click="showCartDetails = false; showForm = true" class="w-full mt-4 bg-green-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-green-700 transition flex justify-center items-center gap-2">
-                            <span>تأكيد ومتابعة البيانات</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
-                        </button>
+                        </tbody>
+                    </table>
+                    <div class="border-t-2 border-dashed border-gray-800 pt-4 mb-6">
+                        <div class="flex justify-between font-bold text-lg"><span>الإجمالي:</span><span x-text="totalPrice + ' جنيه'"></span></div>
+                        <p x-show="totalPrice > 1500" class="text-xs mt-2 font-bold">(شحن مجاني)</p>
+                        <p x-show="totalPrice <= 1500" class="text-xs mt-2">+ مصاريف التوصيل</p>
                     </div>
+                    
+                    <button @click="confirmAndSend()" :disabled="isLoading" class="w-full bg-black text-white font-bold py-3 rounded hover:bg-gray-800 transition flex items-center justify-center gap-2">
+                        <div x-show="isLoading" class="spinner"></div>
+                        <span x-text="isLoading ? 'جاري حفظ الطلب...' : 'تأكيد وإرسال عبر واتساب'"></span>
+                    </button>
+                    <button x-show="!isLoading" @click="showReceipt = false" class="w-full text-gray-500 text-xs mt-3 underline">تعديل البيانات</button>
                 </div>
             </div>
-
-            <div x-cloak x-show="showForm" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-                <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="showForm = false"></div>
-                    <div class="inline-block align-bottom bg-white rounded-t-2xl sm:rounded-2xl text-right overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
-                        <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
-                            <h3 class="text-lg leading-6 font-bold text-gray-900 mb-4 border-b pb-2 text-center">بيانات العميل</h3>
-                            <div class="space-y-4 text-right">
-                                <div><label class="block text-gray-700 text-sm font-bold mb-1">الاسم الكريم</label><input type="text" x-model="customer.name" placeholder="مثال: محمد أحمد" class="w-full border p-2 rounded-lg focus:outline-none focus:border-green-500"></div>
-                                <div><label class="block text-gray-700 text-sm font-bold mb-1">رقم الهاتف (واتساب)</label><input type="tel" x-model="customer.phone" @input="validatePhone()" placeholder="01xxxxxxxxx" maxlength="11" class="w-full border p-2 rounded-lg focus:outline-none focus:border-green-500" :class="{'border-red-500 bg-red-50': phoneError, 'border-green-500': !phoneError && customer.phone.length > 0}"><p x-show="phoneError" class="text-red-500 text-xs mt-1">يجب أن يبدأ بـ 01 ويتكون من 11 رقم</p></div>
-                                <div><label class="block text-gray-700 text-sm font-bold mb-1">العنوان بالتفصيل</label><textarea x-model="customer.address" placeholder="الحي، الشارع، رقم العمارة..." class="w-full border p-2 rounded-lg focus:outline-none focus:border-green-500 h-20"></textarea></div>
-                                <div><label class="block text-gray-700 text-sm font-bold mb-2">الموقع الجغرافي</label><button @click="getLocation()" type="button" class="w-full border border-green-500 text-green-600 bg-green-50 p-2 rounded-lg flex items-center justify-center gap-2 hover:bg-green-100 transition"><span x-text="locationStatus"></span><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg></button></div>
-                            </div>
-                        </div>
-                        <div class="bg-gray-50 px-4 py-3 sm:px-6 flex flex-col-reverse gap-2">
-                            <button type="button" @click="generateReceipt()" :disabled="!isFormValid || phoneError" :class="(!isFormValid || phoneError) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'" class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-3 bg-green-600 text-base font-medium text-white focus:outline-none">مراجعة الفاتورة</button>
-                            <button type="button" @click="showForm = false" class="w-full inline-flex justify-center rounded-xl border border-gray-300 shadow-sm px-4 py-3 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none">إلغاء</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div x-cloak x-show="showReceipt" class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-80 backdrop-blur-sm" aria-labelledby="receipt-title" role="dialog" aria-modal="true">
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="receipt-container w-full max-w-sm mx-auto relative p-6 pt-8 pb-8 text-center text-gray-900 font-mono text-sm leading-relaxed" @click.away="showReceipt = false">
-                        <div class="receipt-edge-top"></div>
-                        <div class="receipt-edge-bottom"></div>
-                        <div class="border-b-2 border-dashed border-gray-800 pb-4 mb-4">
-                            <h2 class="text-xl font-bold mb-1">منتجات مدينتي</h2>
-                            <p class="text-xs">رقم الطلب: <span x-text="orderId"></span></p>
-                            <p class="text-xs" x-text="new Date().toLocaleDateString('ar-EG') + ' ' + new Date().toLocaleTimeString('ar-EG')"></p>
-                        </div>
-                        <div class="text-right border-b-2 border-dashed border-gray-800 pb-4 mb-4">
-                            <p class="mb-1"><strong>العميل:</strong> <span x-text="customer.name"></span></p>
-                            <p class="mb-1"><strong>الهاتف:</strong> <span dir="ltr" x-text="customer.phone"></span></p>
-                            <p class="mb-1 text-xs text-gray-600 truncate"><strong>العنوان:</strong> <span x-text="customer.address"></span></p>
-                        </div>
-                        <table class="w-full mb-4 text-right">
-                            <thead><tr class="border-b border-gray-400"><th class="pb-2">الصنف</th><th class="pb-2 text-center">الكمية</th><th class="pb-2 text-left">السعر</th></tr></thead>
-                            <tbody>
-                                <template x-for="item in cartItems" :key="item.id">
-                                    <tr><td class="py-1" x-text="item.name"></td><td class="py-1 text-center" x-text="item.qty"></td><td class="py-1 text-left" x-text="(item.price * item.qty) + ' ج'"></td></tr>
-                                </template>
-                            </tbody>
-                        </table>
-                        <div class="border-t-2 border-dashed border-gray-800 pt-4 mb-6">
-                            <div class="flex justify-between font-bold text-lg"><span>الإجمالي:</span><span x-text="totalPrice + ' جنيه'"></span></div>
-                            <p x-show="totalPrice > 1500" class="text-xs mt-2 font-bold">(شحن مجاني)</p>
-                            <p x-show="totalPrice <= 1500" class="text-xs mt-2">+ مصاريف التوصيل</p>
-                        </div>
-                        
-                        <button @click="confirmAndSend()" :disabled="isLoading" class="w-full bg-black text-white font-bold py-3 rounded hover:bg-gray-800 transition flex items-center justify-center gap-2">
-                            <div x-show="isLoading" class="spinner"></div>
-                            <span x-text="isLoading ? 'جاري حفظ الطلب...' : 'تأكيد وإرسال عبر واتساب'"></span>
-                        </button>
-                        <button x-show="!isLoading" @click="showReceipt = false" class="w-full text-gray-500 text-xs mt-3 underline">تعديل البيانات</button>
-                    </div>
-                </div>
-            </div>
-
-        </div> </div> <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
+        </div>
+    </div>
 </body>
 </html>
