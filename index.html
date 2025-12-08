@@ -14,8 +14,11 @@
         .item-card { transition: transform 0.1s; }
         .item-card:active { transform: scale(0.98); }
         [x-cloak] { display: none !important; }
-        .receipt-edge-top { position: absolute; top: -10px; left: 0; width: 100%; height: 10px; background-image: linear-gradient(135deg, transparent 50%, #fff 50%), linear-gradient(45deg, #fff 50%, transparent 50%); background-size: 20px 20px; }
-        .receipt-edge-bottom { position: absolute; bottom: -10px; left: 0; width: 100%; height: 10px; background-image: linear-gradient(135deg, transparent 50%, #fff 50%), linear-gradient(45deg, #fff 50%, transparent 50%); background-size: 20px 20px; }
+        .receipt-container { position: relative; background: #fff; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.1)); }
+        .receipt-edge-top, .receipt-edge-bottom { position: absolute; left: 0; width: 100%; height: 10px; background-image: linear-gradient(135deg, transparent 50%, #fff 50%), linear-gradient(45deg, #fff 50%, transparent 50%); background-size: 20px 20px; background-repeat: repeat-x; }
+        .receipt-edge-top { top: -10px; transform: rotate(180deg); }
+        .receipt-edge-bottom { bottom: -10px; }
+        .font-mono { font-family: 'Courier Prime', monospace; }
         .spinner { border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 3px solid #fff; width: 20px; height: 20px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -26,14 +29,13 @@
                 orderId: Math.floor(Math.random() * 9000) + 1000, locationStatus: '📍 تحديد موقعي الحالي',
                 customer: { name: '', phone: '', address: '', mapLink: '' }, products: [], categories: [],
                 
-                // ⚠️ رابط السكربت الخاص بك
+                // ⚠️ الرابط الخاص بك
                 scriptURL: "https://script.google.com/macros/s/AKfycbwhiiH9aTstbgI9xzsbKvoqKXxAo1UIovig2DRXSGYyupyuGhvlwTcsuGOSSNZQzo_5/exec",
 
                 init() { this.fetchProducts(); },
 
                 async fetchProducts() {
                     this.isLoading = true;
-                    // إضافة action=getJSON و timestamp لمنع الكاش
                     const uniqueUrl = this.scriptURL + '?action=getJSON&t=' + new Date().getTime();
                     try {
                         const response = await fetch(uniqueUrl);
@@ -44,54 +46,63 @@
                         }));
                         this.categories = [...new Set(this.products.map(p => p.category))];
                         if (this.categories.length > 0) this.activeCategory = this.categories[0];
-                    } catch (error) { alert("خطأ في الاتصال، تأكد من الإنترنت."); } 
+                    } catch (error) { console.error("Error:", error); alert("حدث خطأ في الاتصال، يرجى تحديث الصفحة."); } 
                     finally { this.isLoading = false; }
                 },
 
-                // دوال السلة
                 getProductsByCategory(cat) { return this.products.filter(p => p.category === cat); },
                 get cartItems() { return Object.keys(this.cart).map(id => { const p = this.products.find(p => p.id == id); return { ...p, qty: this.cart[id] }; }); },
                 addToCart(p) { if (!this.cart[p.id]) this.cart[p.id] = 0; this.cart[p.id]++; },
                 removeFromCart(p) { if (this.cart[p.id] > 0) { this.cart[p.id]--; if (this.cart[p.id] === 0) delete this.cart[p.id]; } },
                 get totalCount() { return Object.values(this.cart).reduce((a, b) => a + b, 0); },
                 get totalPrice() { return Object.keys(this.cart).reduce((total, id) => { const p = this.products.find(p => p.id == id); return total + (p.price * this.cart[id]); }, 0); },
-                
-                // التحقق والموقع
                 validatePhone() { const regex = /^01\d{9}$/; this.phoneError = !regex.test(this.customer.phone); },
                 get isFormValid() { return this.customer.name.trim() !== '' && this.customer.phone.trim() !== '' && this.customer.address.trim() !== ''; },
 
+                // ✅✅✅ الكود الصحيح والقياسي للموقع ✅✅✅
                 getLocation() {
                     this.locationStatus = 'جاري التحديد...';
                     if (navigator.geolocation) {
                         navigator.geolocation.getCurrentPosition((pos) => {
-                            // الرابط العالمي المباشر (الأكثر توافقاً)
-                            this.customer.mapLink = `http://maps.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
+                            const lat = pos.coords.latitude;
+                            const long = pos.coords.longitude;
+                            // رابط جوجل ماب القياسي الذي يعمل في كل مكان
+                            this.customer.mapLink = `https://www.google.com/maps?q=${lat},${long}`;
                             this.locationStatus = 'تم التحديد ✅';
-                        }, () => { this.locationStatus = 'تعذر التحديد'; alert('تأكد من تفعيل GPS'); });
+                        }, () => {
+                            this.locationStatus = 'تعذر التحديد';
+                            alert('تأكد من تفعيل GPS.');
+                        });
                     } else { alert('جهازك لا يدعم الموقع'); }
                 },
 
-                // إرسال الطلب
+                generateReceipt() { this.showForm = false; this.showReceipt = true; },
+                
                 confirmAndSend() {
                     this.isLoading = true;
+                    // إرسال تفاصيل السعر
                     const orderData = { customer: this.customer, items: this.cartItems, total: this.totalPrice, orderId: this.orderId };
                     
                     fetch(this.scriptURL, {
-                        method: 'POST', mode: 'no-cors',
+                        method: 'POST', mode: 'no-cors', 
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(orderData)
                     }).then(() => { this.openWhatsApp(); }).catch(() => { this.openWhatsApp(); });
                 },
 
                 openWhatsApp() {
-                    let msg = `*طلب جديد | منتجات مدينتي* 🧾\n-----------------------------\nرقم الطلب: ${this.orderId}\n👤 العميل: ${this.customer.name}\n📱 الهاتف: ${this.customer.phone}\n🏠 العنوان: ${this.customer.address}\n`;
-                    if(this.customer.mapLink) msg += `📍 الموقع: ${this.customer.mapLink}\n`;
-                    msg += `-----------------------------\n`;
+                    let msg = `*طلب جديد | منتجات مدينتي* 🧾\n-----------------------------\nرقم الطلب: ${this.orderId}\n👤 *العميل:* ${this.customer.name}\n📱 *الهاتف:* ${this.customer.phone}\n🏠 *العنوان:* ${this.customer.address}\n`;
+                    if(this.customer.mapLink) msg += `📍 *الموقع:* ${this.customer.mapLink}\n`;
+                    msg += `-----------------------------\n*التفاصيل:*\n`;
                     this.cartItems.forEach(i => { msg += `▫️ ${i.name} (${i.qty}) : ${i.price * i.qty}ج\n`; });
-                    msg += `-----------------------------\n💰 الإجمالي: ${this.totalPrice} جنيه\n`;
+                    msg += `-----------------------------\n💰 *الإجمالي النهائي:* ${this.totalPrice} جنيه\n`;
                     
-                    const url = `https://wa.me/201099616223?text=${encodeURIComponent(msg)}`; // استبدل رقمك هنا
+                    const phoneNumber = "201099616223"; 
+                    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(msg)}`;
+                    
+                    // استخدام window.location في المتجر (لأنه يعمل بشكل أفضل هنا)
                     window.location.href = url;
+                    
                     setTimeout(() => { this.isLoading = false; }, 3000);
                 }
             }
@@ -123,15 +134,8 @@
                     <template x-for="product in getProductsByCategory(activeCategory)" :key="product.id">
                         <div class="item-card bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex justify-between items-start relative overflow-hidden">
                             <template x-if="product.oldPrice"><div class="absolute top-0 left-0 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-br-lg font-bold">عرض</div></template>
-                            <div class="flex-1 ml-2">
-                                <h3 class="font-bold text-gray-900 text-base" x-text="product.name"></h3>
-                                <p class="text-xs text-gray-500 mt-0.5 leading-snug" x-text="product.desc"></p>
-                                <div class="flex items-center mt-2 space-x-2 space-x-reverse"><span class="text-green-700 font-extrabold text-lg" x-text="product.price + ' ج'"></span><template x-if="product.oldPrice"><span class="text-gray-400 text-xs line-through decoration-red-400" x-text="product.oldPrice + ' ج'"></span></template></div>
-                            </div>
-                            <div class="flex flex-col items-end self-center">
-                                <div x-show="cart[product.id] > 0" class="flex items-center bg-gray-50 rounded-lg border border-gray-200"><button @click="removeFromCart(product)" class="w-8 h-8 flex items-center justify-center text-red-500 font-bold text-lg active:bg-gray-200 rounded-r-lg">-</button><span class="w-6 text-center font-bold text-sm" x-text="cart[product.id]"></span><button @click="addToCart(product)" class="w-8 h-8 flex items-center justify-center text-green-600 font-bold text-lg active:bg-gray-200 rounded-l-lg">+</button></div>
-                                <button x-show="!cart[product.id]" @click="addToCart(product)" class="bg-white border border-green-600 text-green-600 w-8 h-8 rounded-lg flex items-center justify-center shadow-sm active:bg-green-50"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg></button>
-                            </div>
+                            <div class="flex-1 ml-2"><h3 class="font-bold text-gray-900 text-base" x-text="product.name"></h3><p class="text-xs text-gray-500 mt-0.5 leading-snug" x-text="product.desc"></p><div class="flex items-center mt-2 space-x-2 space-x-reverse"><span class="text-green-700 font-extrabold text-lg" x-text="product.price + ' ج'"></span><template x-if="product.oldPrice"><span class="text-gray-400 text-xs line-through decoration-red-400" x-text="product.oldPrice + ' ج'"></span></template></div></div>
+                            <div class="flex flex-col items-end self-center"><div><div x-show="cart[product.id] > 0" class="flex items-center bg-gray-50 rounded-lg border border-gray-200"><button @click="removeFromCart(product)" class="w-8 h-8 flex items-center justify-center text-red-500 font-bold text-lg active:bg-gray-200 rounded-r-lg">-</button><span class="w-6 text-center font-bold text-sm" x-text="cart[product.id]"></span><button @click="addToCart(product)" class="w-8 h-8 flex items-center justify-center text-green-600 font-bold text-lg active:bg-gray-200 rounded-l-lg">+</button></div><button x-show="!cart[product.id]" @click="addToCart(product)" class="bg-white border border-green-600 text-green-600 w-8 h-8 rounded-lg flex items-center justify-center shadow-sm active:bg-green-50"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg></button></div></div>
                         </div>
                     </template>
                 </div>
