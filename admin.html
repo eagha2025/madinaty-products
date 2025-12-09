@@ -3,186 +3,434 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة إدارة منتجات مدينتي</title>
+    <title>لوحة إدارة منتجات مدينتي - المطور</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; }
-        .nav-item.active { background-color: #dcfce7; color: #166534; border-right: 4px solid #166534; }
-        .glass { background: white; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; }
+        .nav-item.active { background-color: #dcfce7; color: #15803d; border-right: 4px solid #15803d; }
+        .glass { background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; }
         [x-cloak] { display: none !important; }
         
-        /* حالة جديد: وميض أحمر غامق */
-        .status-new { background-color: #fee2e2; color: #7f1d1d; border: 1px solid #f87171; animation: pulse-red 1.5s infinite; font-weight: 800; }
-        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); } 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); } }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
         
-        /* تنسيق الطباعة */
+        .status-new { background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; animation: soft-pulse 2s infinite; }
+        @keyframes soft-pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
+        .status-badge { padding: 4px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
+        
+        /* تنسيق الفاتورة الحرارية */
+        .thermal-receipt {
+            background-color: #ffffff;
+            color: #000000;
+            font-family: 'Courier New', Courier, monospace;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .thermal-line { border-bottom: 1px dashed #000; margin: 8px 0; }
+
         @media print { body * { visibility: hidden; } #printable-area, #printable-area * { visibility: visible; } #printable-area { position: absolute; left: 0; top: 0; width: 80mm; } }
     </style>
 </head>
 <body class="text-slate-800" x-data="adminPanel()">
 
+    <audio id="notifSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
     <div class="flex h-screen overflow-hidden">
         <aside class="w-64 bg-white border-l flex-shrink-0 hidden md:flex flex-col z-20 shadow-xl">
-            <div class="p-6 border-b flex flex-col items-center justify-center text-center bg-green-50">
-                <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center text-white font-bold text-xl mb-2">م</div>
-                <h1 class="font-extrabold text-lg text-green-900">لوحة الإدارة</h1>
+            <div class="p-8 border-b text-center bg-green-50">
+                <div class="w-12 h-12 bg-green-600 rounded-xl mx-auto flex items-center justify-center text-white text-2xl font-bold mb-2">م</div>
+                <h1 class="font-extrabold text-lg text-green-900">لوحة إدارة<br>منتجات مدينتي</h1>
             </div>
-            <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
-                <button @click="switchTab('dashboard')" :class="currentTab==='dashboard'?'active':''" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-gray-600 rounded-lg hover:bg-gray-50 transition"><span class="text-lg">📊</span> <span class="font-bold">لوحة العرض</span></button>
-                <button @click="switchTab('orders')" :class="currentTab==='orders'?'active':''" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-gray-600 rounded-lg hover:bg-gray-50 transition"><span class="text-lg">📦</span> <span class="font-bold">سجل الطلبات</span></button>
-                <button @click="switchTab('products')" :class="currentTab==='products'?'active':''" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-gray-600 rounded-lg hover:bg-gray-50 transition"><span class="text-lg">🏷️</span> <span class="font-bold">المنتجات</span></button>
-                <button @click="switchTab('reports')" :class="currentTab==='reports'?'active':''" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-gray-600 rounded-lg hover:bg-gray-50 transition"><span class="text-lg">📈</span> <span class="font-bold">التقارير</span></button>
+            <nav class="flex-1 p-4 space-y-4 overflow-y-auto mt-4">
+                <button @click="currentTab='dashboard'" :class="currentTab==='dashboard'?'active':''" class="nav-item w-full flex items-center gap-4 px-4 py-3 text-gray-500 rounded-r-xl hover:bg-gray-50 transition font-bold">
+                    <span>📊</span> لوحة العرض
+                </button>
+                <button @click="currentTab='orders'" :class="currentTab==='orders'?'active':''" class="nav-item w-full flex items-center gap-4 px-4 py-3 text-gray-500 rounded-r-xl hover:bg-gray-50 transition font-bold relative">
+                    <span>📦</span> سجل الطلبات 
+                    <span x-show="newOrdersCount > 0" class="absolute left-4 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full" x-text="newOrdersCount"></span>
+                </button>
+                <button @click="currentTab='products'" :class="currentTab==='products'?'active':''" class="nav-item w-full flex items-center gap-4 px-4 py-3 text-gray-500 rounded-r-xl hover:bg-gray-50 transition font-bold">
+                    <span>🏷️</span> إدارة المنتجات
+                </button>
+                <button @click="currentTab='customers'" :class="currentTab==='customers'?'active':''" class="nav-item w-full flex items-center gap-4 px-4 py-3 text-gray-500 rounded-r-xl hover:bg-gray-50 transition font-bold">
+                    <span>👥</span> العملاء والولاء
+                </button>
+                <button @click="switchTab('reports')" :class="currentTab==='reports'?'active':''" class="nav-item w-full flex items-center gap-4 px-4 py-3 text-gray-500 rounded-r-xl hover:bg-gray-50 transition font-bold">
+                    <span>📈</span> التقارير المالية
+                </button>
             </nav>
+            <div class="p-4 border-t text-center bg-gray-50">
+                <p class="text-[10px] text-gray-400 mb-1">تم التطوير بواسطة</p>
+                <a href="https://wa.me/201032825648" target="_blank" class="text-xs font-bold text-green-700 flex items-center justify-center gap-2 hover:bg-green-100 p-2 rounded-lg transition">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                    <span>تصميم و برمجة م. عيد الاغا</span>
+                </a>
+            </div>
         </aside>
 
-        <main class="flex-1 overflow-y-auto p-6 relative bg-slate-50">
-            <div class="flex justify-between items-center mb-8">
-                <div><h2 class="text-2xl font-extrabold text-slate-800" x-text="pageTitle"></h2><p class="text-xs text-gray-500 mt-1 font-bold text-green-600" x-text="currentTimeDate"></p></div>
+        <main class="flex-1 overflow-y-auto p-4 md:p-8 relative bg-[#f8fafc]">
+            <div class="flex justify-between items-center mb-10">
                 <div class="flex items-center gap-4">
-                    <div class="relative cursor-pointer p-2 bg-white rounded-full shadow-sm hover:bg-gray-100 transition" @click="currentTab='orders'">
-                        <span class="text-2xl">🔔</span>
-                        <span x-show="newOrdersCount > 0" class="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white animate-bounce" x-text="newOrdersCount"></span>
+                    <button @click="fetchData()" class="bg-white border hover:bg-gray-50 text-gray-700 px-6 py-2 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 transition">
+                        <span x-show="loading" class="animate-spin">↻</span> تحديث
+                    </button>
+                    <div class="relative cursor-pointer" @click="currentTab='orders'">
+                        <span class="text-2xl text-yellow-500">🔔</span>
+                        <span x-show="newOrdersCount > 0" class="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-pulse" x-text="newOrdersCount"></span>
                     </div>
-                    <button @click="fetchData()" class="bg-white border hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2"><span x-show="loading" class="animate-spin">↻</span> تحديث</button>
+                </div>
+                <div class="text-left">
+                    <h2 class="text-2xl font-extrabold text-slate-800" x-text="getPageTitle()"></h2>
+                    <p class="text-sm font-bold text-green-600 dir-ltr" x-text="currentTimeDate"></p>
                 </div>
             </div>
 
             <div x-show="currentTab==='dashboard'" x-transition>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
-                    <div class="glass p-5 border-b-4 border-green-500"><p class="text-xs font-bold text-gray-500">إجمالي المبيعات</p><p class="text-2xl font-extrabold mt-1" x-text="formatMoney(stats.totalRevenue)"></p></div>
-                    <div class="glass p-5 border-b-4 border-blue-500"><p class="text-xs font-bold text-gray-500">عدد الطلبات</p><p class="text-2xl font-extrabold mt-1" x-text="stats.totalOrders"></p></div>
-                    <div class="glass p-5 border-b-4 border-yellow-500"><p class="text-xs font-bold text-gray-500">طلبات جديدة</p><p class="text-2xl font-extrabold mt-1 text-red-600 animate-pulse" x-text="newOrdersCount"></p></div>
-                    <div class="glass p-5 border-b-4 border-purple-500"><p class="text-xs font-bold text-gray-500">مبيعات اليوم</p><p class="text-2xl font-extrabold mt-1" x-text="formatMoney(reportStats.today)"></p></div>
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+                    <div @click="toggleCard('best_sellers')" class="bg-white rounded-xl border-2 border-orange-400 p-4 text-center cursor-pointer card-hover relative overflow-hidden group">
+                        <p class="text-xs font-bold text-gray-500 mb-1">الأكثر مبيعاً</p>
+                        <h3 class="text-xl font-black text-gray-800 flex items-center justify-center gap-1">Top 10 🔥</h3>
+                        <p class="text-[10px] text-gray-400 mt-2">▼ التفاصيل</p>
+                    </div>
+                    <div @click="toggleCard('today_sales')" class="bg-white rounded-xl border-2 border-purple-400 p-4 text-center cursor-pointer card-hover relative">
+                        <p class="text-xs font-bold text-gray-500 mb-1">مبيعات اليوم</p>
+                        <h3 class="text-2xl font-black text-slate-800" x-text="formatMoney(reportStats.today)"></h3>
+                        <p class="text-[10px] text-gray-400 mt-2">▼ التفاصيل</p>
+                    </div>
+                    <div @click="toggleCard('new_orders')" class="bg-white rounded-xl border-2 border-yellow-400 p-4 text-center cursor-pointer card-hover relative">
+                        <p class="text-xs font-bold text-gray-500 mb-1">طلبات جديدة</p>
+                        <h3 class="text-3xl font-black text-slate-800" x-text="newOrdersCount"></h3>
+                        <p class="text-[10px] text-gray-400 mt-2">▼ التفاصيل</p>
+                    </div>
+                    <div class="bg-white rounded-xl border-2 border-emerald-400 p-4 text-center cursor-default relative">
+                        <p class="text-xs font-bold text-gray-500 mb-1">صافي الربح</p>
+                        <h3 class="text-2xl font-black text-emerald-700" x-text="formatMoney(financials.netProfit)"></h3>
+                        <p class="text-[10px] text-emerald-600 mt-2 font-bold" x-text="'هامش: ' + financials.margin + '%'"></p>
+                    </div>
+                    <div @click="toggleCard('revenue')" class="bg-white rounded-xl border-2 border-green-500 p-4 text-center cursor-pointer card-hover relative">
+                        <p class="text-xs font-bold text-gray-500 mb-1">إجمالي المبيعات</p>
+                        <h3 class="text-2xl font-black text-slate-800" x-text="formatMoney(stats.totalRevenue)"></h3>
+                        <p class="text-[10px] text-gray-400 mt-2">▼ التفاصيل</p>
+                    </div>
                 </div>
-                <div class="glass p-6"><h3 class="font-bold mb-4 text-gray-700">🏆 الأكثر مبيعاً</h3><table class="w-full text-sm text-right"><thead class="bg-orange-50 text-orange-800"><tr><th class="p-2">المنتج</th><th class="p-2">العدد</th></tr></thead><tbody><template x-for="(i,x) in getBestSellers().slice(0,5)" :key="x"><tr class="border-b"><td class="p-2" x-text="i.name"></td><td class="p-2 font-bold" x-text="i.count"></td></tr></template></tbody></table></div>
+                
+                <div x-show="expandedCard" x-transition class="glass p-6 border-t-4 border-gray-800 mb-8 animate-fade-in-down">
+                    <div class="flex justify-between items-center mb-4 border-b pb-2">
+                        <h3 class="font-bold text-lg text-gray-800" x-text="getExpandedTitle()"></h3>
+                        <button @click="expandedCard=null" class="text-red-500 font-bold text-sm bg-red-50 px-3 py-1 rounded-full hover:bg-red-100">✕ إغلاق</button>
+                    </div>
+                    <div class="overflow-x-auto max-h-80 custom-scrollbar">
+                        <template x-if="expandedCard === 'best_sellers'">
+                            <table class="w-full text-sm text-right">
+                                <thead class="bg-gray-100 sticky top-0"><tr><th>#</th><th>المنتج</th><th>الكمية المباعة</th></tr></thead>
+                                <tbody><template x-for="(item, index) in topSellingProducts.slice(0,10)" :key="index"><tr class="border-b hover:bg-gray-50"><td class="p-2" x-text="index+1"></td><td class="p-2 font-bold" x-text="item.name"></td><td class="p-2 text-green-600 font-bold" x-text="item.qty"></td></tr></template></tbody>
+                            </table>
+                        </template>
+                        <template x-if="expandedCard !== 'best_sellers'">
+                            <table class="w-full text-sm text-right">
+                                <thead class="bg-gray-100 sticky top-0"><tr><th>#</th><th>العميل</th><th>الحالة</th><th>المبلغ</th></tr></thead>
+                                <tbody><template x-for="(o,i) in getExpandedData()" :key="i"><tr class="border-b hover:bg-gray-50 cursor-pointer" @click="openModal(o)"><td class="p-2" x-text="o.Order_ID"></td><td class="p-2" x-text="o.Customer_Name"></td><td class="p-2"><span class="status-badge" :class="getStatusColor(o.Status)" x-text="o.Status"></span></td><td class="p-2 font-bold" x-text="formatMoney(o.Total_Amount)"></td></tr></template></tbody>
+                            </table>
+                        </template>
+                    </div>
+                </div>
             </div>
 
             <div x-show="currentTab==='orders'" x-transition>
-                <div class="glass p-6">
-                    <div class="flex flex-col md:flex-row gap-4 mb-6 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                        <div class="flex-1"><label class="text-xs font-bold text-gray-500 block mb-1">بحث سريع</label><input x-model="searchQuery" @input="filterList()" type="text" placeholder="ابحث باسم العميل أو الرقم..." class="w-full border p-2 rounded-lg text-sm bg-gray-50 focus:bg-white transition"></div>
-                        <div><label class="text-xs font-bold text-gray-500 block mb-1">الفترة</label><select x-model="dateFilter" @change="filterList()" class="border p-2 rounded-lg text-sm w-40 bg-gray-50"><option value="all">الكل</option><option value="today">اليوم</option><option value="week">هذا الأسبوع</option><option value="month">هذا الشهر</option><option value="custom">مخصص</option></select></div>
-                        <div x-show="dateFilter==='custom'" class="flex gap-2"><div><label class="text-[10px]">من</label><input type="date" x-model="customStartDate" @change="filterList()" class="border p-1.5 rounded-lg text-sm"></div><div><label class="text-[10px]">إلى</label><input type="date" x-model="customEndDate" @change="filterList()" class="border p-1.5 rounded-lg text-sm"></div></div>
+                <div class="glass p-6 mb-6">
+                    <div class="flex flex-col xl:flex-row gap-4 mb-2 items-start xl:items-center">
+                        <div class="flex-1 relative w-full">
+                            <span class="absolute right-3 top-3 text-gray-400">🔍</span>
+                            <input x-model="searchQuery" @input="filterList()" type="text" placeholder="بحث (رقم الطلب، العميل، الهاتف)..." class="w-full border border-gray-200 pr-10 pl-4 py-3 rounded-xl text-sm bg-gray-50 focus:bg-white focus:border-green-500 outline-none transition">
+                        </div>
+                        <div class="flex flex-col md:flex-row gap-2 w-full xl:w-auto">
+                            <select x-model="statusFilter" @change="filterList()" class="border border-gray-200 p-3 rounded-xl text-sm font-bold text-gray-600 bg-white outline-none focus:border-green-500 w-full md:w-40">
+                                <option value="all">كل الحالات</option>
+                                <option value="جديد">جديد فقط</option>
+                                <option value="تم الارسال">تم الارسال</option>
+                            </select>
+                            <select x-model="dateFilter" @change="filterList()" class="border border-gray-200 p-3 rounded-xl text-sm font-bold text-gray-600 bg-white outline-none focus:border-green-500 w-full md:w-40">
+                                <option value="today">📅 اليوم</option>
+                                <option value="week">📅 هذا الأسبوع</option>
+                                <option value="month">📅 هذا الشهر</option>
+                                <option value="custom">🛠️ تاريخ محدد</option>
+                                <option value="all">📁 الكل</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="overflow-x-auto rounded-xl border border-gray-200">
-                        <table class="w-full text-sm text-right bg-white">
-                            <thead class="bg-gray-100 text-gray-700 font-bold sticky top-0"><tr><th class="p-3">#</th><th class="p-3">التاريخ</th><th class="p-3">العميل</th><th class="p-3">الهاتف</th><th class="p-3 text-center">الحالة</th><th class="p-3">الملاحظات</th><th class="p-3">الإجمالي</th><th class="p-3"></th></tr></thead>
-                            <tbody class="divide-y divide-gray-100">
-                                <template x-for="o in filteredOrders" :key="o.Order_ID">
-                                    <tr class="hover:bg-blue-50 transition cursor-pointer group" @click="openModal(o)">
-                                        <td class="font-mono p-3 text-gray-500" x-text="'#'+o.Order_ID"></td>
-                                        <td class="p-3 text-xs text-gray-500"><div x-text="o.Date.split(',')[0]"></div><div class="text-[10px]" x-text="o.Date.split(',')[1]"></div></td>
-                                        <td class="font-bold p-3 text-gray-800" x-text="o.Customer_Name"></td>
-                                        <td class="font-mono p-3 text-gray-600" x-text="o.Phone"></td>
-                                        <td class="text-center p-3"><span class="px-3 py-1 rounded-full text-xs font-bold" :class="o.Status==='جديد'?'status-new':getStatusColor(o.Status)" x-text="o.Status"></span></td>
-                                        <td class="p-3 text-xs text-gray-500 italic max-w-xs truncate" x-text="o.Note || '-'"></td>
-                                        <td class="font-bold text-green-700 p-3" x-text="formatMoney(o.Total_Amount)"></td>
-                                        <td class="p-3 text-center"><button class="bg-white border border-gray-300 text-gray-600 px-3 py-1 rounded-lg text-xs font-bold group-hover:bg-blue-600 group-hover:text-white transition">عرض</button></td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
+
+                    <div x-show="dateFilter === 'custom'" x-transition class="flex flex-col md:flex-row gap-3 mt-3 bg-gray-50 p-3 rounded-xl border border-dashed border-gray-300">
+                        <div class="flex items-center gap-2 flex-1"><span class="text-xs font-bold text-gray-500">من:</span><input type="date" x-model="customStartDate" @change="filterList()" class="border border-gray-300 rounded-lg p-2 text-sm w-full outline-none"></div>
+                        <div class="flex items-center gap-2 flex-1"><span class="text-xs font-bold text-gray-500">إلى:</span><input type="date" x-model="customEndDate" @change="filterList()" class="border border-gray-300 rounded-lg p-2 text-sm w-full outline-none"></div>
                     </div>
+                    
+                    <div class="mt-4 text-left"><span class="text-xs font-bold text-gray-400">عدد النتائج: <span x-text="filteredOrders.length"></span></span></div>
+                </div>
+
+                <div class="glass overflow-hidden border border-gray-200">
+                    <table class="w-full text-sm text-right">
+                        <thead class="bg-gray-50 text-gray-600 font-bold border-b">
+                            <tr><th class="p-4">#</th><th class="p-4">الوقت</th><th class="p-4">العميل</th><th class="p-4">الحالة</th><th class="p-4">ملاحظات</th><th class="p-4">المبلغ</th><th class="p-4 text-center">حذف</th></tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 bg-white">
+                            <template x-for="o in filteredOrders" :key="o.Order_ID">
+                                <tr class="hover:bg-blue-50 cursor-pointer group" @click="openModal(o)">
+                                    <td class="p-4 font-mono text-gray-400" x-text="'#'+o.Order_ID"></td>
+                                    <td class="p-4"><div class="font-bold text-slate-700" x-text="timeSince(o.dateObj)"></div><div class="text-[10px] text-gray-400" x-text="o.Date"></div></td>
+                                    <td class="p-4 font-bold text-slate-800" x-text="o.Customer_Name"></td>
+                                    <td class="p-4"><span class="status-badge shadow-sm" :class="getStatusColor(o.Status)" x-text="o.Status"></span></td>
+                                    <td class="p-4 text-xs text-gray-500 max-w-xs truncate" x-text="o.Note || '-'"></td>
+                                    <td class="p-4 font-black text-green-700" x-text="formatMoney(o.Total_Amount)"></td>
+                                    <td class="p-4 text-center">
+                                        <button @click.stop="deleteOrder(o.Order_ID)" class="w-8 h-8 rounded-full bg-red-50 text-red-600 hover:bg-red-500 hover:text-white transition flex items-center justify-center">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                            <tr x-show="filteredOrders.length === 0"><td colspan="7" class="p-8 text-center text-gray-400 font-bold">لا توجد طلبات في هذا التاريخ</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
             <div x-show="currentTab==='products'" x-transition>
                 <div class="glass p-6">
-                    <div class="flex justify-between mb-6"><h3 class="font-bold text-lg">إدارة المنتجات</h3><button @click="openProductModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg font-bold">+ إضافة منتج</button></div>
-                    <div class="overflow-x-auto"><table class="w-full text-sm text-right bg-white border rounded-lg"><thead class="bg-gray-100 font-bold"><tr><th class="p-3">الاسم</th><th class="p-3">القسم</th><th class="p-3">السعر</th><th class="p-3">التكلفة</th><th class="p-3">الحالة</th><th class="p-3"></th></tr></thead><tbody class="divide-y"><template x-for="p in products"><tr class="hover:bg-gray-50"><td class="p-3 font-bold" x-text="p.Name"></td><td class="p-3 text-gray-500" x-text="p.Category"></td><td class="p-3 text-green-600" x-text="p.Price"></td><td class="p-3 text-gray-400" x-text="p.Cost"></td><td class="p-3" x-text="p.Available"></td><td class="p-3 flex gap-2"><button @click="openProductModal(p)" class="text-blue-600 bg-blue-100 p-2 rounded">✏️</button><button @click="deleteProduct(p.ID)" class="text-red-600 bg-red-100 p-2 rounded">🗑️</button></td></tr></template></tbody></table></div>
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="font-bold text-xl text-slate-800">المنتجات</h3>
+                        <button @click="openProductModal()" class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold shadow-lg hover:bg-green-700 transition"> + إضافة منتج</button>
+                    </div>
+                    <div class="flex overflow-x-auto gap-2 mb-6 pb-2">
+                        <button @click="productFilter='all'" :class="productFilter==='all'?'bg-slate-800 text-white':'bg-white text-gray-600 border'" class="px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition">الكل</button>
+                        <template x-for="c in fixedCategories"><button @click="productFilter=c" :class="productFilter===c?'bg-slate-800 text-white':'bg-white text-gray-600 border'" class="px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition" x-text="c"></button></template>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <template x-for="p in getFilteredProducts()">
+                            <div class="bg-white border rounded-xl p-4 hover:shadow-md transition group relative">
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-[10px] bg-gray-100 px-2 py-1 rounded" x-text="p.Category"></span>
+                                    <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                                        <button @click="openProductModal(p)" class="text-blue-600 bg-blue-50 p-1 rounded">✏️</button>
+                                        <button @click="deleteProduct(p.ID)" class="text-red-600 bg-red-50 p-1 rounded">🗑</button>
+                                    </div>
+                                </div>
+                                <h4 class="font-bold mb-2" x-text="p.Name"></h4>
+                                <div class="flex items-end gap-2">
+                                    <span class="text-green-700 font-bold text-lg" x-text="p.Price + ' ج'"></span>
+                                    <span x-show="p.OldPrice > 0" class="text-gray-400 text-xs line-through mb-1" x-text="p.OldPrice"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <div x-show="currentTab==='customers'" x-transition>
+                <div class="glass p-8">
+                    <div class="flex justify-between items-end mb-6 border-b pb-4">
+                        <h3 class="font-extrabold text-2xl">العملاء</h3>
+                        <button class="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg text-xs font-bold" @click="exportCustomers()">تصدير Excel 📥</button>
+                    </div>
+                    <div class="overflow-x-auto border rounded-xl">
+                        <table class="w-full text-sm text-right bg-white">
+                            <thead class="bg-gray-50 font-bold text-gray-500"><tr><th class="p-3">العميل</th><th class="p-3">طلبات</th><th class="p-3">إنفاق</th><th class="p-3">ولاء</th><th class="p-3 text-center">تواصل</th></tr></thead>
+                            <tbody class="divide-y"><template x-for="c in processedCustomers"><tr class="hover:bg-gray-50"><td class="p-3 font-bold" x-text="c.name"></td><td class="p-3" x-text="c.count"></td><td class="p-3 text-green-600 font-bold" x-text="formatMoney(c.total)"></td><td class="p-3"><span class="px-2 py-1 rounded text-xs border" :class="getLoyalty(c).class" x-text="getLoyalty(c).label"></span></td><td class="p-3 flex justify-center gap-2"><button @click="openWhatsapp(c.phone)" class="bg-green-50 text-green-600 p-2 rounded-full border border-green-200 hover:bg-green-600 hover:text-white transition"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg></button></td></tr></template></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
             <div x-show="currentTab==='reports'" x-transition>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div class="glass p-6 text-center border-t-4 border-green-600"><h4 class="text-gray-500 font-bold text-sm">صافي الربح التقديري</h4><p class="text-3xl font-extrabold text-green-700 mt-2" x-text="formatMoney(financials.netProfit)"></p></div>
-                    <div class="glass p-6 text-center border-t-4 border-blue-600"><h4 class="text-gray-500 font-bold text-sm">متوسط قيمة الطلب</h4><p class="text-3xl font-extrabold text-blue-700 mt-2" x-text="formatMoney(financials.aov)"></p></div>
-                    <div class="glass p-6 text-center border-t-4 border-red-500"><h4 class="text-gray-500 font-bold text-sm">المنتجات الراكدة</h4><p class="text-3xl font-extrabold text-red-700 mt-2" x-text="financials.deadStock"></p></div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+                    <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        <p class="text-xs text-gray-500 font-bold mb-1">إجمالي المبيعات</p>
+                        <p class="text-2xl font-black text-slate-800" x-text="formatMoney(stats.totalRevenue)"></p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        <p class="text-xs text-gray-500 font-bold mb-1">عدد الطلبات</p>
+                        <p class="text-2xl font-black text-slate-800" x-text="stats.totalOrders"></p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        <p class="text-xs text-gray-500 font-bold mb-1">متوسط الطلب (AOV)</p>
+                        <p class="text-2xl font-black text-blue-600" x-text="formatMoney(financials.aov)"></p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        <p class="text-xs text-gray-500 font-bold mb-1">العملاء الجدد</p>
+                        <p class="text-2xl font-black text-orange-500" x-text="financials.newCustomers"></p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border-b-4 border-green-500 shadow-sm">
+                        <p class="text-xs text-gray-500 font-bold mb-1">صافي الأرباح</p>
+                        <p class="text-2xl font-black text-green-700" x-text="formatMoney(financials.netProfit)"></p>
+                    </div>
                 </div>
-                <div class="glass p-6"><h3 class="font-bold text-gray-700 mb-4">تحليل المبيعات (أسبوعي)</h3><div class="h-64 relative"><canvas id="financialChart"></canvas></div></div>
-            </div>
 
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <div class="glass p-6">
+                        <h4 class="font-bold text-lg mb-4 text-slate-800">📊 المبيعات اليومية</h4>
+                        <div class="h-64"><canvas id="salesChart"></canvas></div>
+                    </div>
+
+                    <div class="glass p-6">
+                        <h4 class="font-bold text-lg mb-4 text-slate-800">🔥 أكثر المنتجات مبيعاً</h4>
+                        <div class="space-y-3">
+                            <template x-for="(p, i) in topSellingProducts.slice(0,5)" :key="i">
+                                <div class="flex justify-between items-center p-2 hover:bg-gray-50 rounded-lg">
+                                    <div class="flex items-center gap-3">
+                                        <span class="w-6 h-6 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xs font-bold" x-text="i+1"></span>
+                                        <span class="font-bold text-sm text-gray-700" x-text="p.name"></span>
+                                    </div>
+                                    <span class="text-xs font-bold bg-gray-100 px-2 py-1 rounded" x-text="p.qty + ' قطعة'"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass p-6">
+                        <h4 class="font-bold text-lg mb-4 text-slate-800">👑 أفضل العملاء</h4>
+                        <div class="space-y-3">
+                            <template x-for="(c, i) in processedCustomers.slice(0,5)" :key="i">
+                                <div class="flex justify-between items-center p-2 hover:bg-gray-50 rounded-lg border-b border-dashed last:border-0">
+                                    <div class="flex items-center gap-3">
+                                        <div class="bg-blue-50 text-blue-600 p-2 rounded-full">👤</div>
+                                        <div>
+                                            <p class="font-bold text-sm text-gray-800" x-text="c.name"></p>
+                                            <p class="text-[10px] text-gray-400" x-text="c.count + ' طلبات'"></p>
+                                        </div>
+                                    </div>
+                                    <span class="font-bold text-green-700 text-sm" x-text="formatMoney(c.total)"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="glass p-6">
+                        <h4 class="font-bold text-lg mb-4 text-slate-800">💰 المنتجات الأكثر ربحية</h4>
+                        <div class="space-y-2">
+                             <template x-for="(p, i) in financials.topProfitable">
+                                <div class="flex justify-between items-center py-2 px-3 bg-green-50 rounded-lg border border-green-100">
+                                    <span class="font-bold text-sm text-green-900" x-text="p.name"></span>
+                                    <span class="font-black text-sm text-green-700" x-text="'+'+formatMoney(p.profit)"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
-    <div x-show="showModal" x-cloak class="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center p-4 backdrop-blur-sm" @click.self="showModal=false">
-        <div class="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[500px]">
-            
-            <div class="w-full md:w-1/2 bg-green-50 p-6 flex flex-col border-l border-green-100">
-                <div class="flex justify-between items-start mb-4">
-                    <div><p class="text-xs text-green-600 font-bold mb-1">تاريخ الطلب</p><p class="text-sm font-bold text-green-900" x-text="selectedOrder.Date"></p></div>
-                    <span class="bg-white text-green-800 px-3 py-1 rounded-full text-xs font-bold shadow-sm border border-green-100">📄 الفاتورة</span>
-                </div>
-                
-                <div class="flex-1 overflow-y-auto pr-1">
-                    <table class="w-full text-sm text-right">
-                        <thead class="text-green-700 text-xs border-b border-green-200"><tr><th class="pb-2">الصنف</th><th class="pb-2 text-center">الكمية</th><th class="pb-2 text-center">السعر</th><th class="pb-2 text-center">الإجمالي</th></tr></thead>
-                        <tbody class="divide-y divide-green-200">
-                            <template x-for="item in parseOrderDetails(selectedOrder.Order_Details)">
-                                <tr>
-                                    <td class="py-3 font-medium text-gray-800" x-text="item.name"></td>
-                                    <td class="py-3 text-center text-gray-600" x-text="item.qty"></td>
-                                    <td class="py-3 text-center text-gray-600" x-text="item.price"></td>
-                                    <td class="py-3 text-center font-bold text-green-700" x-text="item.price > 0 ? formatMoney(item.price * item.qty) : '-'"></td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="mt-4 pt-4 border-t border-green-200 flex justify-between items-center">
-                    <span class="text-green-900 font-bold text-lg">الإجمالي النهائي:</span>
-                    <span class="text-3xl font-extrabold text-green-700" x-text="formatMoney(selectedOrder.Total_Amount)"></span>
-                </div>
-            </div>
-
-            <div class="w-full md:w-1/2 p-6 flex flex-col bg-white">
-                <div class="flex justify-between mb-6">
-                    <h3 class="font-bold text-xl text-gray-800">تفاصيل الطلب <span class="text-blue-600" x-text="'#'+selectedOrder.Order_ID"></span></h3>
-                    <button @click="showModal=false" class="text-gray-400 hover:text-red-500 text-2xl">✕</button>
-                </div>
-
-                <div class="bg-blue-50 rounded-xl p-5 border border-blue-100 mb-6 text-center">
-                    <h4 class="text-blue-800 font-bold mb-2">👤 بيانات العميل</h4>
-                    <p class="text-xl font-extrabold text-gray-800 mb-1" x-text="selectedOrder.Customer_Name"></p>
-                    <p class="text-sm font-mono text-gray-500 bg-white px-2 rounded inline-block border border-blue-100" x-text="selectedOrder.Phone"></p>
-                    
-                    <div class="flex justify-center gap-2 mt-4">
-                        <a :href="'tel:'+selectedOrder.Phone" class="bg-white text-blue-600 px-4 py-2 rounded-lg border border-blue-200 hover:bg-blue-600 hover:text-white transition text-xs font-bold flex items-center gap-1">📞 اتصال</a>
-                        <button @click="openWhatsapp(selectedOrder.Phone)" class="bg-green-100 text-green-700 px-4 py-2 rounded-lg border border-green-200 hover:bg-green-600 hover:text-white transition text-xs font-bold flex items-center gap-1">💬 واتساب</button>
-                    </div>
-                    
-                    <div class="mt-3 pt-3 border-t border-blue-200">
-                        <p class="text-xs text-gray-500 mb-1">العنوان والموقع:</p>
-                        <p class="text-sm text-gray-800 mb-2 leading-snug" x-text="selectedOrder.Address"></p>
-                        <a :href="getMapLink(selectedOrder.Location_Link)" target="_blank" class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded text-xs font-bold hover:bg-yellow-200 inline-block">📍 عرض الموقع على الخريطة</a>
-                    </div>
-                </div>
-
-                <div class="mt-auto">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-sm font-bold text-gray-500">تغيير الحالة:</span>
-                        <select x-model="selectedOrder.Status" @change="updateStatus(selectedOrder.Order_ID, $event.target.value)" class="border border-gray-300 rounded-lg px-3 py-1 text-sm bg-white focus:border-blue-500 outline-none w-1/2">
-                            <option>جديد</option><option>جاري التحضير</option><option>تم الارسال</option><option>ملغي</option>
-                        </select>
-                    </div>
-                    <div class="flex gap-2">
-                        <input x-model="printNote" placeholder="اكتب ملاحظة للحفظ والطباعة..." class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
-                        <button @click="saveNote()" class="bg-gray-100 text-gray-600 px-3 py-2 rounded-lg text-xs font-bold hover:bg-gray-200">💾 حفظ</button>
-                        <button @click="printReceipt(selectedOrder, printNote)" class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-black flex items-center gap-2">🖨️ طباعة</button>
-                    </div>
+    <div x-show="showNewOrderAlert" x-transition class="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 cursor-pointer w-auto" @click="handleAlertClick()">
+        <div class="bg-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 border-r-4 border-green-500 animate-bounce">
+            <span class="text-3xl">🔔</span>
+            <div class="text-right">
+                <h4 class="font-black text-gray-800 text-sm">طلب جديد وصل!</h4>
+                <div class="text-xs text-gray-500 mt-1 flex flex-col">
+                    <span x-text="'العميل: ' + notificationData.name" class="font-bold text-green-700"></span>
+                    <span x-text="'الوقت: ' + notificationData.time" class="font-mono mt-0.5"></span>
                 </div>
             </div>
         </div>
     </div>
 
-    <div x-show="showProductModal" x-cloak class="fixed inset-0 z-50 bg-black bg-opacity-70 flex items-center justify-center p-4"><div class="bg-white rounded-xl w-full max-w-md p-6"><h3 class="font-bold text-lg mb-4 text-center">إدارة المنتج</h3><div class="space-y-3"><input x-model="editingProduct.Name" placeholder="اسم المنتج" class="w-full border p-2 rounded"><div class="flex gap-2"><input x-model="editingProduct.Price" type="number" placeholder="السعر" class="w-1/2 border p-2 rounded"><input x-model="editingProduct.Cost" type="number" placeholder="التكلفة" class="w-1/2 border p-2 rounded text-red-500"></div><select x-model="editingProduct.Category" class="w-full border p-2 rounded"><option>المنتجات التراثية</option><option>أكلات تراثية</option><option>أجبان وألبان</option><option>مونة وزيت</option><option>لحوم ومعلبات</option><option>بهارات وتوابل</option><option>حلويات</option><option>مكسرات</option><option>أدوات منزلية</option></select><select x-model="editingProduct.Available" class="w-full border p-2 rounded"><option value="TRUE">متاح</option><option value="FALSE">غير متاح</option></select></div><div class="mt-6 flex gap-2"><button @click="saveProduct()" class="flex-1 bg-green-600 text-white py-2 rounded font-bold">حفظ</button><button @click="showProductModal=false" class="flex-1 bg-gray-100 text-gray-600 py-2 rounded font-bold">إلغاء</button></div></div></div>
+    <div x-show="showModal" x-cloak class="fixed inset-0 z-50 bg-slate-900 bg-opacity-80 flex items-center justify-center p-4 backdrop-blur-sm" @click.self="showModal=false">
+        <div class="bg-white rounded-xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[85vh] md:h-auto border border-gray-200">
+            <div class="w-full md:w-5/12 p-6 flex flex-col border-l border-gray-200 thermal-receipt relative">
+                <div class="absolute top-[-10px] left-1/2 transform -translate-x-1/2 w-6 h-6 bg-slate-900 rounded-full"></div>
+                <div class="text-center mb-4">
+                    <h2 class="font-bold text-xl mb-1">منتجات مدينتي</h2>
+                    <div class="thermal-line"></div>
+                    <p class="font-bold text-lg">فاتورة طلب</p>
+                    <p class="text-xs font-mono" x-text="'#'+selectedOrder.Order_ID"></p>
+                    <p class="text-[10px]" x-text="selectedOrder.Date"></p>
+                    <div class="thermal-line"></div>
+                </div>
+                <div class="flex-1 overflow-y-auto pr-1 custom-scrollbar text-xs font-mono">
+                    <div class="flex justify-between font-bold border-b border-black pb-1 mb-2"><span>الصنف</span><span>السعر</span></div>
+                    <template x-for="item in parseOrderDetails(selectedOrder.Order_Details)">
+                        <div class="mb-2">
+                            <div class="flex justify-between"><span x-text="item.name"></span><span x-text="item.price * item.qty"></span></div>
+                            <div class="text-[10px] text-gray-500"><span x-text="item.qty"></span> x <span x-text="item.price"></span></div>
+                        </div>
+                    </template>
+                </div>
+                <div class="mt-2 pt-2 border-t border-black border-dashed">
+                    <div class="flex justify-between font-bold text-lg"><span>الإجمالي:</span><span x-text="formatMoney(selectedOrder.Total_Amount)"></span></div>
+                    <div class="text-center mt-1"><svg id="barcode" class="h-8 w-full"></svg></div>
+                </div>
+            </div>
+            
+            <div class="w-full md:w-7/12 p-6 flex flex-col bg-gray-50">
+                <div class="flex justify-between mb-4">
+                    <h3 class="font-bold text-xl text-slate-800">تفاصيل الطلب</h3>
+                    <button @click="showModal=false" class="text-gray-400 hover:text-red-500">✕</button>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm mb-4 border border-gray-200">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="bg-blue-100 p-2 rounded-full text-blue-600">👤</div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-bold text-lg" x-text="selectedOrder.Customer_Name"></h4>
+                                <span class="text-[10px] px-2 py-0.5 rounded-full border" 
+                                      :class="getLoyalty(getCustomerStats(selectedOrder.Phone)).class" 
+                                      x-text="getLoyalty(getCustomerStats(selectedOrder.Phone)).label"></span>
+                            </div>
+                            <p class="text-sm text-gray-500" x-text="selectedOrder.Phone"></p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <a :href="'tel:'+selectedOrder.Phone" class="flex-1 bg-blue-50 text-blue-600 py-2 rounded-lg text-center text-sm font-bold hover:bg-blue-600 hover:text-white transition border border-blue-200">📞 اتصال</a>
+                        <button @click="openWhatsapp(selectedOrder.Phone)" class="flex-1 bg-green-50 text-green-600 py-2 rounded-lg text-center text-sm font-bold hover:bg-green-600 hover:text-white transition border border-green-200 flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                            <span>واتساب</span>
+                        </button>
+                    </div>
+                    <div class="mt-3 pt-3 border-t text-sm">
+                        <p class="font-bold text-gray-500 text-xs mb-1">العنوان:</p>
+                        <p x-text="selectedOrder.Address || 'لا يوجد عنوان'"></p>
+                        <a x-show="selectedOrder.Location_Link" :href="getMapLink(selectedOrder.Location_Link)" target="_blank" class="mx-auto mt-3 block w-fit bg-blue-600 text-white text-center py-1 px-4 rounded shadow-md hover:bg-blue-700 transition text-xs font-bold">📍 عرض الموقع على الخريطة</a>
+                    </div>
+                </div>
 
-    <div x-show="showNewOrderAlert" x-transition class="fixed bottom-5 left-1/2 transform -translate-x-1/2 z-50 bg-gray-900 text-white px-6 py-4 rounded-full shadow-2xl flex items-center gap-4 animate-bounce border-2 border-green-500 cursor-pointer" @click="showNewOrderAlert=false; currentTab='orders'">
-        <span class="text-2xl">🔔</span><div><h4 class="font-bold text-sm">يوجد طلب جديد!</h4><p class="text-[10px] text-gray-300">اضغط للمعاينة</p></div>
+                <div class="mt-auto pt-4 border-t border-gray-200">
+                     <div class="mb-3">
+                        <label class="block text-xs font-bold text-gray-500 mb-2">تحديث الحالة</label>
+                        <div class="flex gap-2">
+                             <button @click="updateStatus(selectedOrder.Order_ID, 'جاري التحضير')" class="flex-1 py-2 text-xs font-bold rounded border transition shadow-sm" :class="selectedOrder.Status === 'جاري التحضير' ? 'bg-yellow-500 text-white border-yellow-600' : 'bg-white text-yellow-700 border-yellow-200 hover:bg-yellow-50'">👨‍🍳 تحضير</button>
+                             <button @click="updateStatus(selectedOrder.Order_ID, 'تم الارسال')" class="flex-1 py-2 text-xs font-bold rounded border transition shadow-sm" :class="selectedOrder.Status === 'تم الارسال' ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'">🚀 إرسال</button>
+                             <button @click="updateStatus(selectedOrder.Order_ID, 'ملغي')" class="flex-1 py-2 text-xs font-bold rounded border transition shadow-sm" :class="selectedOrder.Status === 'ملغي' ? 'bg-red-600 text-white border-red-700' : 'bg-white text-red-700 border-red-200 hover:bg-red-50'">🚫 ملغي</button>
+                        </div>
+                     </div>
+                     <div class="flex gap-2">
+                         <input x-model="printNote" placeholder="ملاحظة..." class="flex-1 border rounded-lg px-3 text-sm outline-none">
+                         <button @click="saveNote()" class="bg-gray-200 px-3 rounded-lg text-sm">حفظ</button>
+                         <button @click="printReceipt(selectedOrder, printNote)" class="bg-black text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg flex items-center gap-2">🖨️ طباعة</button>
+                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div x-show="showProductModal" x-cloak class="fixed inset-0 z-50 bg-black bg-opacity-60 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+            <h3 class="font-extrabold text-xl mb-6 text-right text-slate-800 border-b pb-3">إدارة المنتج</h3>
+            <div class="space-y-4">
+                <div><input x-model="editingProduct.Name" type="text" placeholder="الاسم" class="w-full border border-gray-300 rounded-lg p-3 outline-none focus:border-green-500 transition text-right"></div>
+                <div class="flex gap-4"><input x-model="editingProduct.Price" type="number" placeholder="السعر" class="w-1/2 border border-gray-300 rounded-lg p-3 outline-none focus:border-green-500 transition text-right"><input x-model="editingProduct.OldPrice" type="number" placeholder="سعر قديم" class="w-1/2 border border-gray-300 rounded-lg p-3 outline-none focus:border-green-500 transition text-right"></div>
+                <div><select x-model="editingProduct.Category" class="w-full border border-gray-300 rounded-lg p-3 bg-white outline-none focus:border-green-500 text-right text-gray-600"><template x-for="cat in fixedCategories"><option :value="cat" x-text="cat"></option></template></select></div>
+                <div><select x-model="editingProduct.Available" class="w-full border border-gray-300 rounded-lg p-3 bg-white outline-none focus:border-green-500 text-right text-gray-600"><option value="TRUE">متاح</option><option value="FALSE">غير متاح</option></select></div>
+                <div class="pt-4 border-t mt-4"><p class="text-[10px] text-gray-400 mb-1">بيانات داخلية (للتقارير فقط)</p><input x-model="editingProduct.Cost" type="number" placeholder="التكلفة (سري)" class="w-full border border-gray-200 bg-gray-50 rounded-lg p-2 text-xs text-center outline-none"></div>
+            </div>
+            <div class="mt-6 flex gap-3">
+                <button @click="showProductModal=false" class="flex-1 bg-gray-100 text-gray-600 py-3 rounded-lg font-bold hover:bg-gray-200 transition">إلغاء</button>
+                <button @click="saveProduct()" class="flex-1 bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition shadow-md">حفظ</button>
+            </div>
+        </div>
     </div>
     
     <div id="printable-area"></div>
@@ -190,93 +438,179 @@
     <script>
         function adminPanel() {
             return {
-                currentTab: 'dashboard', loading: false, searchQuery: '', dateFilter: 'all', customStartDate:'', customEndDate:'',
-                orders: [], filteredOrders: [], products: [], productFilter: 'all',
-                stats: { totalRevenue: 0, totalOrders: 0 }, reportStats: { today: 0, week: 0, month: 0 },
-                financials: { netProfit: 0, margin: 0, aov: 0, returningRate: 0, deadStock: 0, topProfitable: [] },
-                newOrdersCount: 0, lastOrderId: 0, showNewOrderAlert: false, expandedCard: null,
-                showModal: false, showProductModal: false, selectedOrder: {}, editingProduct: {}, printNote: '', lastUpdate: '-', currentTimeDate: '', chartInstance: null,
+                currentTab: 'dashboard', loading: false, searchQuery: '', 
+                statusFilter: 'all', 
+                dateFilter: 'today',
+                customStartDate: '', customEndDate: '',
+                expandedCard: null,
+                orders: [], filteredOrders: [], products: [], productFilter: 'all', processedCustomers: [],
+                fixedCategories: ['المنتجات التراثية', 'أكلات تراثية', 'أجبان وألبان', 'مونة وزيت', 'لحوم ومعلبات', 'بهارات وتوابل', 'حلويات', 'مكسرات', 'أدوات منزلية'],
+                stats: { totalRevenue: 0, totalOrders: 0 }, 
+                reportStats: { today: 0, week: 0, month: 0 },
+                financials: { netProfit: 0, margin: 0, aov: 0, newCustomers: 0, topProfitable: [], deadStockList: [] },
+                topSellingProducts: [],
+                newOrdersCount: 0, 
+                acknowledgedMaxId: 0,
+                showNewOrderAlert: false,
+                notificationData: { name: '', time: '' }, 
+                showModal: false, showProductModal: false, selectedOrder: {}, editingProduct: {}, printNote: '', 
+                currentTimeDate: '', salesChart: null,
                 
-                // ⚠️ الرابط المثبت
                 scriptURL: "https://script.google.com/macros/s/AKfycbwhiiH9aTstbgI9xzsbKvoqKXxAo1UIovig2DRXSGYyupyuGhvlwTcsuGOSSNZQzo_5/exec",
 
                 init() { 
                     this.fetchData(); 
                     setInterval(() => this.checkForUpdates(), 10000); 
-                    setInterval(() => { this.currentTimeDate = new Date().toLocaleDateString('ar-EG', { weekday: 'long', hour: '2-digit', minute:'2-digit' }); }, 1000);
+                    setInterval(() => { this.currentTimeDate = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit' }); }, 1000);
                 },
-                switchTab(tab) { this.currentTab = tab; if (tab === 'reports') setTimeout(() => this.renderChart(), 300); },
 
-                getWhatsappLink(phone) { if (!phone) return '#'; let p = String(phone).replace(/\D/g, ''); if (p.startsWith('0')) p = p.substring(1); return `https://wa.me/2${p}`; },
-                openWhatsapp(phone) { window.open(this.getWhatsappLink(phone), '_blank'); },
-                getMapLink(link) { if (link && link.includes('googleusercontent')) { const m = link.match(/query=([\d\.]+),([\d\.]+)/); if (m) return `http://googleusercontent.com/maps.google.com/?api=1&query=${m[1]},${m[2]}`; } return link || '#'; },
+                getPageTitle() { const t = {'dashboard':'لوحة العرض','orders':'سجل الطلبات','products':'إدارة المنتجات','customers':'العملاء','reports':'التقارير المالية'}; return t[this.currentTab]; },
+                switchTab(tab) { this.currentTab = tab; if (tab === 'reports') setTimeout(() => this.renderCharts(), 300); },
+                
+                handleAlertClick() { 
+                    this.showNewOrderAlert = false; 
+                    this.currentTab = 'orders'; 
+                    this.statusFilter = 'جديد'; 
+                    this.dateFilter = 'all'; 
+                    this.fetchData().then(() => {
+                        if (this.orders.length > 0) {
+                            const currentMaxId = Math.max(...this.orders.map(o => o.Order_ID));
+                            this.acknowledgedMaxId = currentMaxId;
+                        }
+                    });
+                },
+
+                toggleCard(c) { this.expandedCard = this.expandedCard === c ? null : c; },
+                getExpandedTitle() { const t={'best_sellers':'الأكثر مبيعاً','today_sales':'مبيعات اليوم','new_orders':'الطلبات الجديدة','revenue':'جميع الطلبات'}; return t[this.expandedCard] || 'التفاصيل'; },
+                getExpandedData() { 
+                    if(this.expandedCard==='new_orders') return this.orders.filter(o=>o.Status==='جديد');
+                    if(this.expandedCard==='today_sales') { const t=new Date(); t.setHours(0,0,0,0); return this.orders.filter(o=>{const d=new Date(o.dateObj);d.setHours(0,0,0,0);return d.getTime()===t.getTime()}); }
+                    return this.orders.slice(0, 50); 
+                },
 
                 async fetchData() {
                     this.loading = true;
                     try {
                         const res = await fetch(this.scriptURL + '?action=getJSON&t=' + Date.now()); 
                         const data = await res.json();
-                        this.orders = (data.orders || []).map(o => ({...o, Total_Amount: parseFloat(String(o.Total_Amount).replace(/[^0-9.]/g, '')) || 0, dateObj: new Date(o.Date), Status: o.Status || 'جديد'})).sort((a, b) => b.dateObj - a.dateObj);
-                        this.products = (data.products || []).map(p => ({...p, Price: Number(p.Price)||0, OldPrice: Number(p.OldPrice)||0, Cost: Number(p.Cost)||0}));
+                        this.orders = (data.orders || []).map(o => ({ ...o, Total_Amount: parseFloat(String(o.Total_Amount).replace(/[^0-9.]/g, '')) || 0, dateObj: new Date(o.Date), Status: o.Status ? o.Status.trim() : 'جديد', Order_ID: Number(o.Order_ID) })).sort((a, b) => b.dateObj - a.dateObj);
+                        this.products = (data.products || []).map(p => ({ ...p, Price: Number(p.Price)||0, OldPrice: Number(p.OldPrice)||0, Cost: Number(p.Cost)||0, Available: p.Available || 'TRUE' }));
                         
-                        if(this.orders.length > 0) {
-                            const maxId = Math.max(...this.orders.map(o => Number(o.Order_ID) || 0));
-                            if (this.lastOrderId === 0) this.lastOrderId = maxId;
-                            // تحديث حالة التنبيه إذا كان هناك طلبات جديدة لم تعالج
-                            const newOrders = this.orders.filter(o => o.Status === 'جديد').length;
-                            this.newOrdersCount = newOrders;
-                            if (newOrders > 0) this.showNewOrderAlert = true;
+                        if (this.acknowledgedMaxId === 0 && this.orders.length > 0) {
+                            this.acknowledgedMaxId = Math.max(...this.orders.map(o => o.Order_ID));
                         }
-                        this.updateView(); this.lastUpdate = new Date().toLocaleTimeString('ar-EG');
-                    } catch(e) {} finally { this.loading = false; }
+                        
+                        this.updateView(); 
+                    } catch(e) { console.error(e); } finally { this.loading = false; }
                 },
 
                 async checkForUpdates() {
                     try {
-                        const res = await fetch(this.scriptURL + '?action=getJSON&t=' + Date.now()); const data = await res.json();
-                        const latestIds = (data.orders || []).map(o => Number(o.Order_ID) || 0);
-                        const maxId = Math.max(...latestIds);
-                        if (maxId > this.lastOrderId) { this.lastOrderId = maxId; this.fetchData(); } // جلب البيانات إذا زاد الرقم
+                        const res = await fetch(this.scriptURL + '?action=getJSON&t=' + Date.now()); 
+                        const data = await res.json();
+                        const fetchedOrders = data.orders || [];
+                        if (fetchedOrders.length > 0) {
+                            const ids = fetchedOrders.map(o => Number(o.Order_ID));
+                            const serverMaxId = Math.max(...ids);
+                            
+                            if (serverMaxId > this.acknowledgedMaxId) {
+                                const newOrder = fetchedOrders.find(o => Number(o.Order_ID) === serverMaxId);
+                                if(newOrder) {
+                                    const timePart = newOrder.Date.includes(',') ? newOrder.Date.split(',')[1] : newOrder.Date;
+                                    this.notificationData = { name: newOrder.Customer_Name, time: timePart };
+                                }
+                                this.showNewOrderAlert = true;
+                                document.getElementById('notifSound').play().catch(e=>{});
+                                this.fetchData(); 
+                            }
+                        }
+                        this.newOrdersCount = (fetchedOrders.filter(o => (o.Status || 'جديد').trim() === 'جديد')).length;
                     } catch(e) {}
                 },
 
-                // باقي المنطق (بدون تغيير لضمان الثبات)
-                updateView() { this.filterList(); this.calculateStats(); this.calculateReports(); if(this.currentTab === 'reports') this.renderChart(); },
-                filterList() {
-                    let list = this.orders; const now = new Date(); now.setHours(0,0,0,0);
-                    if (this.dateFilter === 'today') list = list.filter(o => { const d=new Date(o.Date); d.setHours(0,0,0,0); return d.getTime() === now.getTime(); });
-                    if (this.dateFilter === 'week') { const w=new Date(now); w.setDate(now.getDate()-7); list = list.filter(o => new Date(o.Date) >= w); }
-                    if (this.dateFilter === 'month') { const m=new Date(now); m.setMonth(now.getMonth()-1); list = list.filter(o => new Date(o.Date) >= m); }
-                    if (this.dateFilter === 'custom' && this.customStartDate && this.customEndDate) { const s=new Date(this.customStartDate); const e=new Date(this.customEndDate); e.setHours(23,59,59); list = list.filter(o => { const d = new Date(o.Date); return d >= s && d <= e; }); }
-                    if (this.searchQuery) { const q=this.searchQuery.toLowerCase(); list = list.filter(o => String(o.Order_ID).includes(q) || (o.Customer_Name||'').toLowerCase().includes(q) || String(o.Phone).includes(q)); }
-                    this.filteredOrders = list;
-                },
+                updateView() { this.filterList(); this.calculateData(); this.newOrdersCount = this.orders.filter(o => o.Status === 'جديد').length; if(this.currentTab === 'reports') this.renderCharts(); },
                 
-                // حفظ الملاحظة في الشيت
-                async saveNote() {
-                    if(!this.selectedOrder.Order_ID) return;
-                    // تحديث محلي
-                    this.selectedOrder.Note = this.printNote;
-                    // تحديث سيرفر
-                    await fetch(this.scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'save_note', orderId: this.selectedOrder.Order_ID, note: this.printNote }) });
-                    alert('تم حفظ الملاحظة');
+                filterList() { 
+                    let list = this.orders; 
+                    if (this.searchQuery) { const q = this.searchQuery.toLowerCase(); list = list.filter(o => String(o.Order_ID).includes(q) || (o.Customer_Name||'').toLowerCase().includes(q) || String(o.Phone).includes(q)); } 
+                    if (this.statusFilter !== 'all') { list = list.filter(o => o.Status === this.statusFilter); }
+                    
+                    const now = new Date(); now.setHours(0,0,0,0);
+                    if (this.dateFilter === 'today') { list = list.filter(o => { const d = new Date(o.dateObj); d.setHours(0,0,0,0); return d.getTime() === now.getTime(); }); } 
+                    else if (this.dateFilter === 'week') { const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7); list = list.filter(o => new Date(o.dateObj) >= weekAgo); } 
+                    else if (this.dateFilter === 'month') { const monthAgo = new Date(now); monthAgo.setDate(1); list = list.filter(o => new Date(o.dateObj) >= monthAgo); } 
+                    else if (this.dateFilter === 'custom' && this.customStartDate && this.customEndDate) { const start = new Date(this.customStartDate); const end = new Date(this.customEndDate); end.setHours(23,59,59,999); list = list.filter(o => { const d = new Date(o.dateObj); return d >= start && d <= end; }); }
+
+                    list.sort((a, b) => b.dateObj - a.dateObj);
+                    this.filteredOrders = list; 
                 },
 
-                // دوال المساعدة المعتادة (parseOrderDetails, printReceipt, etc.)
+                calculateData() {
+                    const custMap = {}; let totalRevenue = 0; let productSales = {}; const now = new Date(); now.setHours(0,0,0,0); this.reportStats = { today:0, week:0, month:0 }; let totalCost = 0;
+                    this.orders.forEach(o => {
+                        totalRevenue += o.Total_Amount; const d = new Date(o.dateObj); d.setHours(0,0,0,0);
+                        if(d.getTime() === now.getTime()) this.reportStats.today += o.Total_Amount;
+                        const phone = String(o.Phone).replace(/[^0-9]/g,''); if (!custMap[phone]) custMap[phone] = { name: o.Customer_Name, phone: phone, total: 0, count: 0 }; custMap[phone].total += o.Total_Amount; custMap[phone].count += 1;
+                        this.parseOrderDetails(o.Order_Details).forEach(item => { const product = this.products.find(p => p.Name.trim() === item.name.trim()); if(product) { totalCost += (product.Cost * item.qty); productSales[product.Name] = (productSales[product.Name] || 0) + item.qty; } });
+                    });
+                    this.stats.totalRevenue = totalRevenue; this.stats.totalOrders = this.orders.length; this.processedCustomers = Object.values(custMap).sort((a,b) => b.total - a.total);
+                    this.financials.netProfit = totalRevenue - totalCost; this.financials.margin = totalRevenue > 0 ? Math.round((this.financials.netProfit / totalRevenue) * 100) : 0;
+                    this.financials.aov = this.stats.totalOrders > 0 ? Math.round(totalRevenue / this.stats.totalOrders) : 0;
+                    this.financials.newCustomers = this.processedCustomers.filter(c => c.count === 1).length;
+                    this.financials.topProfitable = this.products.map(p => ({ name: p.Name, profit: (p.Price - p.Cost) * (productSales[p.Name]||0) })).sort((a,b) => b.profit - a.profit).slice(0, 5);
+                    this.financials.deadStockList = this.products.filter(p => !productSales[p.Name]);
+                    this.topSellingProducts = Object.entries(productSales).map(([name, qty]) => ({ name, qty })).sort((a, b) => b.qty - a.qty);
+                },
+
+                renderCharts() {
+                    const ctx1 = document.getElementById('salesChart'); if(!ctx1) return; if(this.salesChart) this.salesChart.destroy();
+                    const labels = []; const data = []; for(let i=6; i>=0; i--) { const d = new Date(); d.setDate(d.getDate()-i); d.setHours(0,0,0,0); labels.push(d.toLocaleDateString('ar-EG',{weekday:'short'})); const val = this.orders.filter(o=>{ const od = new Date(o.dateObj); od.setHours(0,0,0,0); return od.getTime()===d.getTime(); }).reduce((s,o)=>s+o.Total_Amount,0); data.push(val); }
+                    this.salesChart = new Chart(ctx1, { type: 'bar', data: { labels: labels, datasets: [{ label: 'المبيعات', data: data, backgroundColor: '#10b981', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false } });
+                },
+
+                timeSince(date) { const seconds = Math.floor((new Date() - date) / 1000); let interval = seconds / 3600; if (interval > 1) return Math.floor(interval) + " ساعة"; interval = seconds / 60; if (interval > 1) return Math.floor(interval) + " دقيقة"; return "الآن"; },
+                openWhatsapp(phone) { if (!phone) return; let p = String(phone).replace(/\D/g, ''); if (p.startsWith('0')) p = p.substring(1); window.open(`https://wa.me/2${p}`, '_blank'); },
+                getMapLink(link) { if (link && link.includes('googleusercontent')) { const m = link.match(/query=([\d\.]+),([\d\.]+)/); if (m) return `http://googleusercontent.com/maps.google.com/?api=1&query=${m[1]},${m[2]}`; } return link || '#'; },
+                saveNote() { if(!this.selectedOrder.Order_ID) return; this.selectedOrder.Note = this.printNote; fetch(this.scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'save_note', orderId: this.selectedOrder.Order_ID, note: this.printNote }) }); alert('تم الحفظ'); this.updateView(); },
                 parseOrderDetails(s) { if (!s) return []; return s.split('|').map(l => { const m = l.match(/^(.*?)\s*\((\d+)\)\s*-\s*(\d+)/); if (m) return { name: m[1].trim(), qty: Number(m[2]), price: Number(m[3]) }; const old = l.match(/^(.*?)\s*\((\d+)\)/); return old ? { name: old[1].trim(), qty: Number(old[2]), price: 0 } : { name: l.trim(), qty: 1, price: 0 }; }); },
                 formatMoney(n) { return Number(n).toLocaleString('en-US') + ' ج'; },
-                getStatusColor(s) { return {'جديد':'bg-red-100 text-red-800','تم الارسال':'bg-blue-100 text-blue-800','تم التسليم':'bg-green-100 text-green-800'}[s] || 'bg-gray-100'; },
-                openModal(o) { this.selectedOrder = o; this.printNote = o.Note || ''; this.showModal = true; },
-                updateStatus(id, s) { fetch(this.scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'update_status', orderId: id, newStatus: s }) }); const idx=this.orders.findIndex(o=>o.Order_ID==id); if(idx>-1) this.orders[idx].Status=s; },
-                // ... (باقي الدوال الحسابية والتشارت نفس الكود السابق) ...
-                calculateStats() { this.stats.totalRevenue = this.orders.reduce((s,o)=>s+o.Total_Amount,0); this.stats.totalOrders = this.orders.length; },
-                calculateReports() { const now=new Date(); now.setHours(0,0,0,0); const week=new Date(now); week.setDate(now.getDate()-7); const month=new Date(now); month.setDate(1); this.reportStats = { today:0, week:0, month:0 }; let totalCost = 0; const productSales = {}; this.orders.forEach(o => { const d=new Date(o.Date); d.setHours(0,0,0,0); if(d.getTime()===now.getTime()) this.reportStats.today+=o.Total_Amount; if(d>=w) this.reportStats.week+=o.Total_Amount; if(d>=m) this.reportStats.month+=o.Total_Amount; const items = this.parseOrderDetails(o.Order_Details); items.forEach(item => { const product = this.products.find(p => p.Name.trim() === item.name.trim()); if(product) { totalCost += (product.Cost * item.qty); productSales[product.Name] = (productSales[product.Name] || 0) + item.qty; } }); }); this.financials.netProfit = this.stats.totalRevenue - totalCost; this.financials.margin = this.stats.totalRevenue > 0 ? Math.round((this.financials.netProfit / this.stats.totalRevenue) * 100) : 0; this.financials.aov = this.stats.totalOrders > 0 ? this.stats.totalRevenue / this.stats.totalOrders : 0; const customerCounts = {}; this.orders.forEach(o => { customerCounts[String(o.Phone)] = (customerCounts[String(o.Phone)] || 0) + 1; }); const returningCount = Object.values(customerCounts).filter(c => c > 1).length; this.financials.returningRate = Object.keys(customerCounts).length > 0 ? Math.round((returningCount / Object.keys(customerCounts).length) * 100) : 0; this.financials.deadStock = this.products.filter(p => !productSales[p.Name]).length; this.financials.topProfitable = this.products.map(p => ({ name: p.Name, profit: (p.Price - p.Cost) * (productSales[p.Name] || 0) })).sort((a,b) => b.profit - a.profit).slice(0, 5); },
-                renderChart() { const ctx=document.getElementById('financialChart'); if(!ctx) return; if(this.chartInstance) this.chartInstance.destroy(); const l=[],d=[]; for(let i=6; i>=0; i--) { const dt=new Date(); dt.setDate(dt.getDate()-i); dt.setHours(0,0,0,0); l.push(dt.toLocaleDateString('ar-EG',{weekday:'short'})); d.push(this.orders.filter(o=>{ const od=new Date(o.Date); od.setHours(0,0,0,0); return od.getTime()===dt.getTime(); }).reduce((s,o)=>s+o.Total_Amount,0)); } this.chartInstance = new Chart(ctx, { type: 'bar', data: { labels: l, datasets: [{ label: 'المبيعات', data: d, backgroundColor: '#166534', borderRadius: 5 }] }, options: { responsive: true, maintainAspectRatio: false } }); },
-                getBestSellers() { const c={}; this.orders.forEach(o=>{ (o.Order_Details||'').split('|').forEach(i=>{ const m=i.match(/^(.*?)\s*\(/); const n=m?m[1].trim():i.trim(); if(n)c[n]=(c[n]||0)+1; }); }); return Object.entries(c).map(([n,v])=>({name:n,count:v})).sort((a,b)=>b.count-a.count).slice(0,10); },
-                getExpandedData() { if(this.expandedCard==='new_orders')return this.orders.filter(o=>o.Status==='جديد'); if(this.expandedCard==='today_sales'){const t=new Date();t.setHours(0,0,0,0);return this.orders.filter(o=>{const d=new Date(o.Date);d.setHours(0,0,0,0);return d.getTime()===t.getTime()});} return this.orders; },
-                getExpandedTitle() { const t={'revenue':'المبيعات','orders_count':'الطلبات','new_orders':'الجديدة','today_sales':'اليوم','best_sellers':'الأفضل'}; return t[this.expandedCard]; },
-                toggleCard(c) { this.expandedCard = this.expandedCard === c ? null : c; },
-                printReceipt(order, note) { const items = this.parseOrderDetails(order.Order_Details).map(i => `<tr><td style="text-align:right">${i.name}</td><td style="text-align:center">${i.qty}</td><td style="text-align:center">${i.price}</td></tr>`).join(''); const html = `<div style="text-align:center;border-bottom:1px dashed #333;padding-bottom:10px;margin-bottom:10px"><h2 style="margin:0">منتجات مدينتي</h2><p style="font-size:10px">#${order.Order_ID} | ${order.Date.split(',')[0]}</p></div><div style="font-size:11px;text-align:right"><p>العميل: ${order.Customer_Name}</p><p>ت: ${order.Phone}</p></div><table style="width:100%;font-size:11px;border-top:1px dashed #333;margin-top:10px" dir="rtl"><thead><tr><th style="text-align:right">صنف</th><th>عدد</th><th>سعر</th></tr></thead><tbody>${items}</tbody></table>${note?`<p style="font-size:10px;border-top:1px dashed #333;padding-top:5px">ملاحظة: ${note}</p>`:''}<div style="margin-top:10px;font-weight:bold;display:flex;justify-content:space-between"><span>الإجمالي:</span><span>${this.formatMoney(order.Total_Amount)}</span></div><div style="text-align:center;font-size:9px;margin-top:15px">شكراً لزيارتكم</div>`; document.getElementById('printable-area').innerHTML = html; window.print(); }
+                getStatusColor(s) { return {'جديد':'status-new','تم الارسال':'bg-blue-100 text-blue-800','تم التسليم':'bg-green-100 text-green-800','ملغي':'bg-red-100 text-red-800'}[s] || 'bg-gray-100'; },
+                openModal(o) { this.selectedOrder = o; this.printNote = o.Note || ''; this.showModal = true; this.showNewOrderAlert = false; },
+                updateStatus(id, s) { 
+                    fetch(this.scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'update_status', orderId: id, newStatus: s }) }); 
+                    this.selectedOrder.Status = s; 
+                    const idx = this.orders.findIndex(o => o.Order_ID == id); 
+                    if(idx > -1) this.orders[idx].Status = s; 
+                    this.updateView(); 
+                },
+                
+                // دالة الحذف الجديدة
+                async deleteOrder(id) {
+                    if(!confirm('هل أنت متأكد من حذف هذا الطلب نهائياً؟')) return;
+                    await fetch(this.scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'delete_order', id: id }) });
+                    // حذف محلي فوري
+                    this.orders = this.orders.filter(o => o.Order_ID !== id);
+                    this.updateView();
+                },
+
+                getCustomerStats(phone) {
+                    if (!phone) return { total: 0 };
+                    const p = String(phone).replace(/\D/g, '');
+                    const customer = this.processedCustomers.find(c => c.phone === p);
+                    return customer || { total: 0 };
+                },
+
+                getLoyalty(c) { if(c.total>5000) return {label:'VIP', class:'bg-yellow-100 text-yellow-800 border-yellow-200'}; if(c.total>2000) return {label:'مميز', class:'bg-blue-100 text-blue-800 border-blue-200'}; return {label:'عادي', class:'bg-gray-100 text-gray-600'}; },
+                getFilteredProducts() { if (this.productFilter === 'all') return this.products; return this.products.filter(p => p.Category === this.productFilter); },
+                openProductModal(p={}) { this.editingProduct={...p, Available:p.Available||'TRUE', Category: p.Category || this.fixedCategories[0]}; this.showProductModal=true; },
+                async saveProduct() { await fetch(this.scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'save_product', product: this.editingProduct }) }); this.showProductModal=false; setTimeout(()=>this.fetchData(),1500); },
+                async deleteProduct(id) { if(!confirm('حذف؟')) return; await fetch(this.scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'delete_product', id: id }) }); setTimeout(()=>this.fetchData(),1500); },
+                exportCustomers() { let csv = "الاسم,الهاتف,الطلبات,الإنفاق\n" + this.processedCustomers.map(c => `${c.name},'${c.phone},${c.count},${c.total}`).join("\n"); const link = document.createElement("a"); link.href = "data:text/csv;charset=utf-8,%EF%BB%BF" + encodeURI(csv); link.download = "customers.csv"; link.click(); },
+                printReceipt(order, note) { 
+                    const items = this.parseOrderDetails(order.Order_Details).map(i => `<tr><td style="text-align:right;">${i.name}</td><td>${i.qty}</td><td>${i.price}</td></tr>`).join('');
+                    const html = `<div style="font-family:'Courier New';direction:rtl;text-align:center;width:80mm"><h3>منتجات مدينتي</h3><p>#${order.Order_ID}</p><hr><div style="text-align:right"><p>العميل: ${order.Customer_Name}</p><p>ت: ${order.Phone}</p></div><hr><table style="width:100%;text-align:center"><thead><tr><th style="text-align:right">صنف</th><th>ع</th><th>س</th></tr></thead><tbody>${items}</tbody></table><hr><h3>الإجمالي: ${this.formatMoney(order.Total_Amount)}</h3>${note?`<p>ملاحظة: ${note}</p>`:''}</div>`;
+                    document.getElementById('printable-area').innerHTML = html; window.print();
+                }
             }
         }
     </script>
