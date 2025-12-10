@@ -88,7 +88,7 @@
                         <div class="flex-1 relative w-full"><span class="absolute right-3 top-3 text-gray-400">🔍</span><input x-model="searchQuery" @input="filterList()" type="text" placeholder="بحث..." class="w-full border border-gray-200 pr-10 pl-4 py-3 rounded-xl text-sm bg-gray-50 focus:bg-white transition"></div>
                         <div class="flex flex-col md:flex-row gap-2 w-full xl:w-auto">
                             <select x-model="statusFilter" @change="filterList()" class="border border-gray-200 p-3 rounded-xl text-sm font-bold text-gray-600 bg-white outline-none w-full md:w-40"><option value="all">كل الحالات</option><option value="جديد">جديد</option><option value="تم الارسال">تم الارسال</option></select>
-                            <select x-model="dateFilter" @change="filterList()" class="border border-gray-200 p-3 rounded-xl text-sm font-bold text-gray-600 bg-white outline-none w-full md:w-40"><option value="today">📅 اليوم</option><option value="week">📅 الأسبوع</option><option value="month">📅 الشهر</option><option value="custom">🛠️ مخصص</option><option value="all">📁 الكل</option></select>
+                            <select x-model="dateFilter" @change="filterList()" class="border border-gray-200 p-3 rounded-xl text-sm font-bold text-gray-600 bg-white outline-none w-full md:w-40"><option value="all">📁 كل الأوقات</option><option value="today">📅 اليوم</option><option value="week">📅 الأسبوع</option><option value="month">📅 الشهر</option><option value="custom">🛠️ مخصص</option></select>
                         </div>
                     </div>
                     <div x-show="dateFilter === 'custom'" x-transition class="flex flex-col md:flex-row gap-3 mt-3 bg-gray-50 p-3 rounded-xl border border-dashed border-gray-300">
@@ -147,10 +147,6 @@
                 <div class="flex gap-4"><input x-model="editingProduct.Price" type="number" placeholder="السعر" class="w-1/2 border border-gray-300 rounded-lg p-3 outline-none focus:border-green-500 transition text-right"><input x-model="editingProduct.OldPrice" type="number" placeholder="سعر قديم" class="w-1/2 border border-gray-300 rounded-lg p-3 outline-none focus:border-green-500 transition text-right"></div>
                 <div><select x-model="editingProduct.Category" class="w-full border border-gray-300 rounded-lg p-3 bg-white outline-none focus:border-green-500 text-right text-gray-600"><template x-for="cat in fixedCategories"><option :value="cat" x-text="cat"></option></template></select></div>
                 <div><select x-model="editingProduct.Available" class="w-full border border-gray-300 rounded-lg p-3 bg-white outline-none focus:border-green-500 text-right text-gray-600"><option value="TRUE">متاح</option><option value="FALSE">غير متاح</option></select></div>
-                <div class="pt-4 border-t mt-4">
-                    <p class="text-[10px] text-gray-400 mb-1">بيانات داخلية (للتتبع فقط - يجب إدخال ID)</p>
-                    <input x-model="editingProduct.ID" type="text" placeholder="معرف المنتج ID" class="w-full border border-gray-200 bg-gray-50 rounded-lg p-2 text-xs text-center outline-none">
-                </div>
                 <div><input x-model="editingProduct.Cost" type="number" placeholder="التكلفة (سري)" class="w-full border border-gray-200 bg-gray-50 rounded-lg p-2 text-xs text-center outline-none"></div>
             </div>
             <div class="mt-6 flex gap-3"><button @click="showProductModal=false" class="flex-1 bg-gray-100 text-gray-600 py-3 rounded-lg font-bold hover:bg-gray-200 transition">إلغاء</button><button @click="saveProduct()" class="flex-1 bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition shadow-md">حفظ</button></div>
@@ -161,20 +157,19 @@
         function adminPanel() {
             return {
                 currentTab: 'dashboard', loading: false, searchQuery: '', 
-                statusFilter: 'all', dateFilter: 'today', customStartDate: '', customEndDate: '',
+                statusFilter: 'all', dateFilter: 'all', customStartDate: '', customEndDate: '',
                 expandedCard: null, orders: [], filteredOrders: [], products: [], productFilter: 'all', processedCustomers: [],
                 fixedCategories: ['المنتجات التراثية', 'أكلات تراثية', 'أجبان وألبان', 'مونة وزيت', 'لحوم ومعلبات', 'بهارات وتوابل', 'حلويات', 'مكسرات', 'أدوات منزلية'],
                 stats: { totalRevenue: 0, totalOrders: 0 }, reportStats: { today: 0, week: 0, month: 0 },
                 financials: { netProfit: 0, margin: 0, aov: 0, newCustomers: 0, topProfitable: [], deadStockList: [] },
                 topSellingProducts: [], newOrdersCount: 0, acknowledgedMaxId: 0, showNewOrderAlert: false, notificationData: { name: '', time: '' }, 
                 showModal: false, showProductModal: false, selectedOrder: {}, 
-                editingProduct: {ID:'', Name:'', Description:'', Price:0, OldPrice:0, Cost:0, Available:'TRUE', Category:'المنتجات التراثية'}, // تأمين التهيئة الأولية
+                editingProduct: {ID:'', Name:'', Description:'', Price:0, OldPrice:0, Cost:0, Available:'TRUE', Category:'المنتجات التراثية'},
 
                 printNote: '', currentTimeDate: '', salesChart: null,
                                 
                 scriptURL: "https://n8n-latest-viqu.onrender.com/webhook/madinaty-api", 
                 
-                // إضافة دالة updateView المفقودة لتجنب الخطأ المرجعي
                 updateView() { 
                     this.filterList();
                     this.processData();
@@ -206,28 +201,17 @@
                     this.loading = true;                    
                     try {                        
                         const url = this.scriptURL + '?action=getJSON&t=' + Date.now();
-                        console.log("Fetching data from URL:", url); // تسجيل الرابط المرسل
-                        
                         const res = await fetch(url);                         
-                        
-                        if (!res.ok) {
-                            // إذا كان هناك خطأ HTTP (مثل 404 أو 500)
-                            console.error("HTTP Error during fetch:", res.status, res.statusText);
-                            throw new Error(`HTTP Error: ${res.status}`);
-                        }
-                        
+                        if (!res.ok) { throw new Error(`HTTP Error: ${res.status}`); }
                         const data = await res.json();                        
                         
-                        // ... (بقية معالجة البيانات) ... 
                         this.orders = (data.orders || []).map(o => ({ 
                             ...o, 
                             Total_Amount: parseFloat(String(o.Total_Amount).replace(/[^0-9.]/g, '')) || 0, 
                             dateObj: new Date(o.Date), 
-                            // **تعديل حاسم:** تحويل القيم الفارغة إلى "جديد" بشكل صريح
                             Status: (String(o.Status || '').trim() === '' ? 'جديد' : String(o.Status).trim()), 
                             Order_ID: Number(o.Order_ID) 
-                        })).filter(o => o.Order_ID > 0)
-                          .sort((a, b) => b.dateObj - a.dateObj);                        
+                        })).filter(o => o.Order_ID > 0).sort((a, b) => b.dateObj - a.dateObj);                        
                         
                         this.products = (data.products || []).map(p => ({ 
                             ...p, Price: Number(p.Price)||0, 
@@ -240,12 +224,7 @@
                             this.acknowledgedMaxId = Math.max(...this.orders.map(o => o.Order_ID));                        
                         }                        
                         this.processData(); 
-                        
-                    } catch(e) { 
-                        console.error("Fetch Data Failed:", e); 
-                    } finally { 
-                        this.loading = false; 
-                    }                
+                    } catch(e) { console.error("Fetch Data Failed:", e); } finally { this.loading = false; }                
                 },
 
                 async checkForUpdates() {                    
@@ -267,26 +246,21 @@
                                 }                            
                             }                        
                         }                        
-                        // **تعديل حاسم:** استخدام نفس المنطق لحساب الطلبات الجديدة
-                        this.newOrdersCount = (fetchedOrders.filter(o => (String(o.Status || '').trim() === '' ? 'جديد' : String(o.Status).trim()) === 'جديد')).length; 
+                        this.newOrdersCount = (fetchedOrders.filter(o => (String(o.Status).trim() || 'جديد') === 'جديد')).length; 
                     } catch(e) {}                
                 },
 
                 processData() {                    
                     this.filterList(); this.calculateData(); 
-                    // **تعديل حاسم:** استخدام نفس المنطق لحساب الطلبات الجديدة في الإحصائيات
                     this.newOrdersCount = this.orders.filter(o => o.Status === 'جديد').length; 
                     if(this.currentTab === 'reports') this.renderCharts();                
                 },
                                 
                 filterList() {                     
-                    // تأمين قائمة الطلبات ضد القيم الفارغة أو غير المعرفة
                     let list = (this.orders || []).filter(o => o.Status !== 'محذوف');                     
                     if (this.searchQuery) { const q = this.searchQuery.toLowerCase(); list = list.filter(o => String(o.Order_ID).includes(q) || (o.Customer_Name||'').toLowerCase().includes(q) || String(o.Phone).includes(q)); }                     
                     
-                    // منطق التصفية للحالة 
                     if (this.statusFilter !== 'all') { 
-                        // هنا نستخدم التصفية المباشرة بناءً على القيمة النظيفة التي تم تعيينها في fetchData
                         list = list.filter(o => o.Status === this.statusFilter); 
                     }
                     
@@ -295,6 +269,7 @@
                     else if (this.dateFilter === 'week') { const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7); list = list.filter(o => new Date(o.dateObj) >= weekAgo); }                     
                     else if (this.dateFilter === 'month') { const monthAgo = new Date(now); monthAgo.setDate(1); list = list.filter(o => new Date(o.dateObj) >= monthAgo); }                     
                     else if (this.dateFilter === 'custom' && this.customStartDate && this.customEndDate) { const start = new Date(this.customStartDate); const end = new Date(this.customEndDate); end.setHours(23,59,59,999); list = list.filter(o => { const d = new Date(o.dateObj); return d >= start && d <= end; }); }
+                    
                     list.sort((a, b) => b.dateObj - a.dateObj);                    
                     this.filteredOrders = list;                 
                 },
@@ -313,13 +288,10 @@
                     this.processedCustomers = Object.values(custMap).sort((a,b) => b.total - a.total);                    
                     
                     let safeTotalRevenue = totalRevenue > 0 ? totalRevenue : 1; 
-
                     this.financials.netProfit = totalRevenue - totalCost; 
                     this.financials.margin = Math.round((this.financials.netProfit / safeTotalRevenue) * 100);
                     if (totalRevenue === 0) this.financials.margin = 0; 
-
                     this.financials.aov = this.stats.totalOrders > 0 ? Math.round(totalRevenue / this.stats.totalOrders) : 0;
-                    
                     this.financials.newCustomers = this.processedCustomers.filter(c => c.count === 1).length;                    
                     this.financials.topProfitable = this.products.map(p => ({ name: p.Name, profit: (p.Price - p.Cost) * (productSales[p.Name]||0) })).sort((a,b) => b.profit - a.profit).slice(0, 5);                    
                     this.financials.deadStockList = this.products.filter(p => !productSales[p.Name]);                    
@@ -363,7 +335,6 @@
                                 
                 async deleteOrder(id) {                    
                     if(!confirm('هل أنت متأكد من حذف هذا الطلب نهائياً؟')) return;                    
-                    // تحديث محلي فوري للحالة لإخفاء الطلب                    
                     const idx = this.orders.findIndex(o => o.Order_ID === id);                    
                     if(idx > -1) this.orders[idx].Status = 'محذوف';                                        
                     this.processData();                    
@@ -389,9 +360,16 @@
                 },
                                 
                 async saveProduct() { 
-                    // تهيئة البيانات: نضمن أن القيم الرقمية تكون 0 إذا كانت فارغة لمنع أخطاء n8n
+                    // منطق توليد ID تلقائي إذا كان جديداً
+                    let finalID = this.editingProduct.ID;
+                    if (!finalID) {
+                         const existingIds = this.products.map(p => Number(p.ID)).filter(n => !isNaN(n));
+                         // إذا كانت القائمة فارغة ابدأ بـ 1، وإلا خذ الأكبر وأضف 1
+                         finalID = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
+                    }
+
                     const productToSend = {
-                        ID: this.editingProduct.ID || '',
+                        ID: finalID,
                         Name: this.editingProduct.Name || '',
                         Description: this.editingProduct.Description || '',
                         Category: this.editingProduct.Category || '',
@@ -401,18 +379,16 @@
                         Cost: Number(this.editingProduct.Cost) || 0 
                     };
 
-                    // إرسال البيانات
                     await this.postToN8n({ action: 'save_product', product: productToSend });
 
                     this.showProductModal=false; 
-                    // ننتظر قليلاً ثم نطلب تحديث البيانات من n8n
                     setTimeout(()=>this.fetchData(),1500); 
                 },
                                 
                 async deleteProduct(productName) { 
                     if(!confirm('هل أنت متأكد من حذف المنتج: ' + productName + '؟')) return; 
                     this.postToN8n({ action: 'delete_product', productName: productName });
-                    setTimeout(()=>this.fetchData(), 1500); // تحديث القائمة بعد الحذف
+                    setTimeout(()=>this.fetchData(), 1500); 
                 },
                                 
                 exportCustomers() { let csv = "الاسم,الهاتف,الطلبات,الإنفاق\n" + this.processedCustomers.map(c => `${c.name},'${c.phone},${c.count},${c.total}`).join("\n"); const link = document.createElement("a"); link.href = "data:text/csv;charset=utf-8,%EF%BB%BF" + encodeURI(csv); link.download = "customers.csv"; link.click(); },
@@ -423,4 +399,6 @@
                 }
             }
         }
-    </script></body></html>
+    </script>
+</body>
+</html>
