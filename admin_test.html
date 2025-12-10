@@ -64,7 +64,7 @@
                         this.orders = (data.orders || []).map(o => ({ 
                             ...o, Total_Amount: parseFloat(String(o.Total_Amount).replace(/[^0-9.]/g, '')) || 0, 
                             dateObj: new Date(o.Date), 
-                            Status: String(o.Status).trim() || 'جديد', // **التعديل هنا لضمان قراءة نظيفة للحالة**
+                            Status: (String(o.Status || '').trim() === '' ? 'جديد' : String(o.Status).trim()), // **التعديل هنا لضمان قراءة نظيفة للحالة**
                             Order_ID: Number(o.Order_ID) 
                         })).sort((a, b) => b.dateObj - a.dateObj);                        
                         
