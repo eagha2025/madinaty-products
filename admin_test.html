@@ -47,15 +47,44 @@
                 async fetchData() {                    
                     this.loading = true;                    
                     try {                        
-                        const res = await fetch(this.scriptURL + '?action=getJSON&t=' + Date.now());                         
+                        const url = this.scriptURL + '?action=getJSON&t=' + Date.now();
+                        console.log("Fetching data from URL:", url); // تسجيل الرابط المرسل
+                        
+                        const res = await fetch(url);                         
+                        
+                        if (!res.ok) {
+                            // إذا كان هناك خطأ HTTP (مثل 404 أو 500)
+                            console.error("HTTP Error during fetch:", res.status, res.statusText);
+                            throw new Error(`HTTP Error: ${res.status}`);
+                        }
+                        
                         const data = await res.json();                        
-                        this.orders = (data.orders || []).map(o => ({ ...o, Total_Amount: parseFloat(String(o.Total_Amount).replace(/[^0-9.]/g, '')) || 0, dateObj: new Date(o.Date), Status: o.Status ? o.Status.trim() : 'جديد', Order_ID: Number(o.Order_ID) })).sort((a, b) => b.dateObj - a.dateObj);                        
-                        this.products = (data.products || []).map(p => ({ ...p, Price: Number(p.Price)||0, OldPrice: Number(p.OldPrice)||0, Cost: Number(p.Cost)||0, Available: p.Available || 'TRUE' }));                                                
+                        
+                        // ... (بقية معالجة البيانات) ... 
+                        this.orders = (data.orders || []).map(o => ({ 
+                            ...o, Total_Amount: parseFloat(String(o.Total_Amount).replace(/[^0-9.]/g, '')) || 0, 
+                            dateObj: new Date(o.Date), 
+                            Status: o.Status ? o.Status.trim() : 'جديد', 
+                            Order_ID: Number(o.Order_ID) 
+                        })).sort((a, b) => b.dateObj - a.dateObj);                        
+                        
+                        this.products = (data.products || []).map(p => ({ 
+                            ...p, Price: Number(p.Price)||0, 
+                            OldPrice: Number(p.OldPrice)||0, 
+                            Cost: Number(p.Cost)||0, 
+                            Available: p.Available || 'TRUE' 
+                        }));                                                
+                        
                         if (this.acknowledgedMaxId === 0 && this.orders.length > 0) {                            
                             this.acknowledgedMaxId = Math.max(...this.orders.map(o => o.Order_ID));                        
                         }                        
-                        this.processData();                     
-                    } catch(e) { console.error(e); } finally { this.loading = false; }                
+                        this.processData(); 
+                        
+                    } catch(e) { 
+                        console.error("Fetch Data Failed:", e); 
+                    } finally { 
+                        this.loading = false; 
+                    }                
                 },
 
                 async checkForUpdates() {                    
@@ -104,7 +133,7 @@
                         if(o.Status === 'محذوف') return;                        
                         totalRevenue += o.Total_Amount; const d = new Date(o.dateObj); d.setHours(0,0,0,0);                        
                         if(d.getTime() === now.getTime()) this.reportStats.today += o.Total_Amount;                        
-                        const phone = String(o.Phone).replace(/[^0-9]/g,''); if (!custMap[phone]) custMap[phone] = { name: o.Customer_Name, phone: phone, total: 0, count: 0 }; custMap[phone].total += o.Total_Amount; custMap[phone].count += 1;                        
+                        const phone = String(o.Phone).replace(/\D/g, ''); if (!custMap[phone]) custMap[phone] = { name: o.Customer_Name, phone: phone, total: 0, count: 0 }; custMap[phone].total += o.Total_Amount; custMap[phone].count += 1;                        
                         this.parseOrderDetails(o.Order_Details).forEach(item => { const product = this.products.find(p => p.Name.trim() === item.name.trim()); if(product) { totalCost += (product.Cost * item.qty); productSales[product.Name] = (productSales[product.Name] || 0) + item.qty; } });                    
                     });                    
                     this.stats.totalRevenue = totalRevenue; 
@@ -115,7 +144,7 @@
 
                     this.financials.netProfit = totalRevenue - totalCost; 
                     this.financials.margin = Math.round((this.financials.netProfit / safeTotalRevenue) * 100);
-                    if (totalRevenue === 0) this.financials.margin = 0; // تأمين الهامش
+                    if (totalRevenue === 0) this.financials.margin = 0; 
 
                     this.financials.aov = this.stats.totalOrders > 0 ? Math.round(totalRevenue / this.stats.totalOrders) : 0;
                     
