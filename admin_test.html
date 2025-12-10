@@ -55,6 +55,7 @@
                         if (!res.ok) {
                             // إذا كان هناك خطأ HTTP (مثل 404 أو 500)
                             console.error("HTTP Error during fetch:", res.status, res.statusText);
+                            // نترك هذا الخطأ هنا لأنه يساعدنا في تتبع مشكلة الخلل 500
                             throw new Error(`HTTP Error: ${res.status}`);
                         }
                         
@@ -62,11 +63,13 @@
                         
                         // ... (بقية معالجة البيانات) ... 
                         this.orders = (data.orders || []).map(o => ({ 
-                            ...o, Total_Amount: parseFloat(String(o.Total_Amount).replace(/[^0-9.]/g, '')) || 0, 
+                            ...o, 
+                            Total_Amount: parseFloat(String(o.Total_Amount).replace(/[^0-9.]/g, '')) || 0, 
                             dateObj: new Date(o.Date), 
-                            Status: (String(o.Status || '').trim() === '' ? 'جديد' : String(o.Status).trim()), // **التعديل هنا لضمان قراءة نظيفة للحالة**
+                            Status: (String(o.Status || '').trim() === '' ? 'جديد' : String(o.Status).trim()), // **التعديل للتأكد من الحالة 'جديد'**
                             Order_ID: Number(o.Order_ID) 
-                        })).sort((a, b) => b.dateObj - a.dateObj);                        
+                        })).filter(o => o.Order_ID > 0) // **تصفية إضافية لإزالة الطلبات ذات ID فارغ أو صفر لتجنب Duplicate Key**
+                          .sort((a, b) => b.dateObj - a.dateObj);                        
                         
                         this.products = (data.products || []).map(p => ({ 
                             ...p, Price: Number(p.Price)||0, 
@@ -106,7 +109,7 @@
                                 }                            
                             }                        
                         }                        
-                        this.newOrdersCount = (fetchedOrders.filter(o => (String(o.Status).trim() || 'جديد') === 'جديد')).length; // تأمين حالة الجديد هنا
+                        this.newOrdersCount = (fetchedOrders.filter(o => (String(o.Status).trim() || 'جديد') === 'جديد')).length; 
                     } catch(e) {}                
                 },
 
@@ -115,11 +118,13 @@
                 },
                                 
                 filterList() {                     
-                    let list = this.orders.filter(o => o.Status !== 'محذوف');                     
+                    // تأمين قائمة الطلبات ضد القيم الفارغة أو غير المعرفة
+                    let list = (this.orders || []).filter(o => o.Status !== 'محذوف');                     
                     if (this.searchQuery) { const q = this.searchQuery.toLowerCase(); list = list.filter(o => String(o.Order_ID).includes(q) || (o.Customer_Name||'').toLowerCase().includes(q) || String(o.Phone).includes(q)); }                     
                     
-                    // منطق التصفية للحالة الجديدة 
+                    // منطق التصفية للحالة 
                     if (this.statusFilter !== 'all') { 
+                        // هنا نستخدم التصفية المباشرة بناءً على القيمة النظيفة التي تم تعيينها في fetchData
                         list = list.filter(o => o.Status === this.statusFilter); 
                     }
                     
