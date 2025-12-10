@@ -64,7 +64,7 @@
                         this.orders = (data.orders || []).map(o => ({ 
                             ...o, Total_Amount: parseFloat(String(o.Total_Amount).replace(/[^0-9.]/g, '')) || 0, 
                             dateObj: new Date(o.Date), 
-                            Status: o.Status ? o.Status.trim() : 'جديد', 
+                            Status: String(o.Status).trim() || 'جديد', // **التعديل هنا لضمان قراءة نظيفة للحالة**
                             Order_ID: Number(o.Order_ID) 
                         })).sort((a, b) => b.dateObj - a.dateObj);                        
                         
@@ -106,7 +106,7 @@
                                 }                            
                             }                        
                         }                        
-                        this.newOrdersCount = (fetchedOrders.filter(o => (o.Status || 'جديد').trim() === 'جديد')).length;                    
+                        this.newOrdersCount = (fetchedOrders.filter(o => (String(o.Status).trim() || 'جديد') === 'جديد')).length; // تأمين حالة الجديد هنا
                     } catch(e) {}                
                 },
 
@@ -117,7 +117,12 @@
                 filterList() {                     
                     let list = this.orders.filter(o => o.Status !== 'محذوف');                     
                     if (this.searchQuery) { const q = this.searchQuery.toLowerCase(); list = list.filter(o => String(o.Order_ID).includes(q) || (o.Customer_Name||'').toLowerCase().includes(q) || String(o.Phone).includes(q)); }                     
-                    if (this.statusFilter !== 'all') { list = list.filter(o => o.Status === this.statusFilter); }                                        
+                    
+                    // منطق التصفية للحالة الجديدة 
+                    if (this.statusFilter !== 'all') { 
+                        list = list.filter(o => o.Status === this.statusFilter); 
+                    }
+                    
                     const now = new Date(); now.setHours(0,0,0,0);                    
                     if (this.dateFilter === 'today') { list = list.filter(o => { const d = new Date(o.dateObj); d.setHours(0,0,0,0); return d.getTime() === now.getTime(); }); }                     
                     else if (this.dateFilter === 'week') { const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7); list = list.filter(o => new Date(o.dateObj) >= weekAgo); }                     
