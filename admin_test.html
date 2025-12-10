@@ -107,9 +107,18 @@
                         const phone = String(o.Phone).replace(/[^0-9]/g,''); if (!custMap[phone]) custMap[phone] = { name: o.Customer_Name, phone: phone, total: 0, count: 0 }; custMap[phone].total += o.Total_Amount; custMap[phone].count += 1;                        
                         this.parseOrderDetails(o.Order_Details).forEach(item => { const product = this.products.find(p => p.Name.trim() === item.name.trim()); if(product) { totalCost += (product.Cost * item.qty); productSales[product.Name] = (productSales[product.Name] || 0) + item.qty; } });                    
                     });                    
-                    this.stats.totalRevenue = totalRevenue; this.stats.totalOrders = this.orders.length; this.processedCustomers = Object.values(custMap).sort((a,b) => b.total - a.total);                    
-                    this.financials.netProfit = totalRevenue - totalCost; this.financials.margin = totalRevenue > 0 ? Math.round((this.financials.netProfit / totalRevenue) * 100) : 0;                    
-                    this.financials.aov = this.stats.totalOrders > 0 ? Math.round(totalRevenue / this.stats.totalOrders) : 0;                    
+                    this.stats.totalRevenue = totalRevenue; 
+                    this.stats.totalOrders = this.orders.length; 
+                    this.processedCustomers = Object.values(custMap).sort((a,b) => b.total - a.total);                    
+                    
+                    let safeTotalRevenue = totalRevenue > 0 ? totalRevenue : 1; 
+
+                    this.financials.netProfit = totalRevenue - totalCost; 
+                    this.financials.margin = Math.round((this.financials.netProfit / safeTotalRevenue) * 100);
+                    if (totalRevenue === 0) this.financials.margin = 0; // تأمين الهامش
+
+                    this.financials.aov = this.stats.totalOrders > 0 ? Math.round(totalRevenue / this.stats.totalOrders) : 0;
+                    
                     this.financials.newCustomers = this.processedCustomers.filter(c => c.count === 1).length;                    
                     this.financials.topProfitable = this.products.map(p => ({ name: p.Name, profit: (p.Price - p.Cost) * (productSales[p.Name]||0) })).sort((a,b) => b.profit - a.profit).slice(0, 5);                    
                     this.financials.deadStockList = this.products.filter(p => !productSales[p.Name]);                    
