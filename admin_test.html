@@ -245,10 +245,17 @@
                     this.processData();
                 },
 
-                init() {                     
-                    this.fetchData();                     
-                    setInterval(() => this.checkForUpdates(), 10000);                     
-                    setInterval(() => { this.currentTimeDate = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit' }); }, 1000);                
+                // عند بدء التشغيل
+                init() { 
+                    this.fetchData(); // جلب البيانات مرة واحدة فقط عند الفتح
+                
+                // تم إيقاف التحديث التلقائي لتقليل الترافيك كما طلبت
+                // setInterval(() => this.checkForUpdates(), 10000); 
+                
+                // تحديث الوقت والتاريخ فقط (محلياً لا يستهلك انترنت)
+                    setInterval(() => { 
+                        this.currentTimeDate = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit' }); 
+                    }, 1000);
                 },
 
                 getPageTitle() { const t = {'dashboard':'لوحة العرض','orders':'سجل الطلبات','products':'إدارة المنتجات','customers':'العملاء','reports':'التقارير المالية'}; return t[this.currentTab]; },
